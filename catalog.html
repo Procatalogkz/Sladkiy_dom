@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Каталог товаров</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg: #f9f7f2;
@@ -40,7 +43,7 @@
     .products-grid { display: flex; flex-direction: column; align-items: center; gap: 0; }
 
     /* Карточка */
-    .product-card { background: var(--card-bg); border-radius: 0; box-shadow: none; border-bottom: 8px solid var(--bg); overflow: hidden; width: 100%; max-width: 100%; display: flex; flex-direction: column; align-items: stretch; }
+    .product-card { font-family: 'Roboto', sans-serif; background: var(--card-bg); border-radius: 0; box-shadow: none; border-bottom: 8px solid var(--bg); overflow: hidden; width: 100%; max-width: 100%; display: flex; flex-direction: column; align-items: stretch; }
     .product-card:hover { transform: translateY(-3px); }
 
     /* Фото */
@@ -49,23 +52,21 @@
     /* Тело карточки */
     .product-body { padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; }
 
-    /* Верхний ряд: цены и бренд/метки */
+    /* Верхний ряд: категория, цены, бренд/метки */
     .product-top-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-
-    /* Нижний ряд: название и категория */
-    .product-bottom-row { display: flex; align-items: center; gap: 8px; }
+    .product-left { flex: 1; }
+    .product-right { flex: 1; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
 
     /* Цены */
     .product-prices { display: flex; flex-wrap: nowrap; align-items: baseline; gap: 12px; }
     .price-item { display: flex; align-items: baseline; gap: 4px; }
     .price-label { font-size: 12px; color: var(--muted); text-transform: uppercase; }
-    .price-value { font-weight: 700; font-size: 32px; color: #1a73e8; }
-    .price-pack-value { font-weight: 700; font-size: 32px; color: #1a73e8; }
+    .price-value { font-weight: 700; font-size: 30px; color: #1a73e8; }
+    .price-pack-value { font-weight: 700; font-size: 30px; color: #1a73e8; }
 
     /* Бренд и метки справа */
-    .product-brand-badges { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
     .product-brand { font-size: 16px; font-style: italic; color: #2e7d32; white-space: nowrap; font-weight: 700; }
-    .product-category-badge { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--accent2); border: 1px solid var(--accent2); padding: 2px 8px; border-radius: 12px; white-space: nowrap; }
+    .product-category-badge { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--accent2); border: 1px solid var(--accent2); padding: 4px 12px; border-radius: 12px; white-space: nowrap; }
 
     /* Название товара */
     .product-name { font-size: 20px; font-weight: 700; line-height: 1.2; color: #1a1a1a; }
@@ -84,6 +85,44 @@
       .product-body { padding: 8px 10px; }
       .product-name { font-size: 15px; }
     }
+
+    /* Модальное окно для просмотра изображения */
+    .image-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.95);
+      z-index: 9999;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    .image-modal.active { display: flex; }
+    .image-modal img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+    .image-modal-close {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: rgba(255, 255, 255, 0.9);
+      border: none;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      font-size: 28px;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #333;
+    }
   </style>
 </head>
 <body>
@@ -101,6 +140,12 @@
 
     <!-- Товары -->
     <div class="products-grid" id="products-container"></div>
+  </div>
+
+  <!-- Модальное окно для просмотра изображения -->
+  <div class="image-modal" id="image-modal" onclick="closeImageModal(event)">
+    <button class="image-modal-close" onclick="closeImageModal(event)">×</button>
+    <img id="modal-image" src="" alt="">
   </div>
 
   <script>
@@ -146,7 +191,7 @@
     async function loadData() {
       try {
         categories = await API('categories?order=display_order');
-        const prods = await API('products?select=*,categories(name),brands(name)&order=display_order');
+        const prods = await API('products?select=*,categories(name),brands(name)&is_visible=eq.true&order=display_order');
         allProducts = prods;
         renderCategoryFilters();
         renderProducts();
@@ -200,9 +245,12 @@
 
         return `
           <div class="product-card">
-            <img class="product-img" src="${cloudinaryUrl(p.image_public_id)}" alt="${escapeHtml(p.name)}">
+            <img class="product-img" src="${cloudinaryUrl(p.image_public_id)}" alt="${escapeHtml(p.name)}" onclick="openImageModal('${cloudinaryUrl(p.image_public_id)}')">
             <div class="product-body">
               <div class="product-top-row">
+                <div class="product-left">
+                  <div class="product-category-badge">${cat?.name || ''}</div>
+                </div>
                 <div class="product-prices">
                   <div class="price-item">
                     <span class="price-label">1 шт</span>
@@ -213,9 +261,8 @@
                     <span class="price-pack-value">${packPrice.toLocaleString()} ₸</span>
                   </div>
                 </div>
-                <div class="product-brand-badges">
+                <div class="product-right">
                   <div class="product-brand">${brand?.name || ''}</div>
-                  <div class="product-category-badge">${cat?.name || ''}</div>
                   ${badgesHtml ? `<div class="product-badges">${badgesHtml}</div>` : ''}
                 </div>
               </div>
@@ -232,6 +279,22 @@
       div.appendChild(document.createTextNode(str));
       return div.innerHTML;
     }
+
+    // Модальное окно для просмотра изображений
+    window.openImageModal = function(src) {
+      const modal = document.getElementById('image-modal');
+      const modalImg = document.getElementById('modal-image');
+      modalImg.src = src;
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    };
+
+    window.closeImageModal = function(e) {
+      if (e && e.target !== e.currentTarget && e.target.className !== 'image-modal-close') return;
+      const modal = document.getElementById('image-modal');
+      modal.classList.remove('active');
+      document.body.style.overflow = '';
+    };
 
     // Инициализация
     loadData();

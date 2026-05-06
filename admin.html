@@ -256,7 +256,7 @@ const API = (endpoint, options = {}) => {
           <div class="sb-urole">Администратор</div>
         </div>
       </div>
-      <button class="btn btn-ghost btn-sm btn-full">↩ Выйти</button>
+      <button class="btn btn-ghost btn-sm btn-full" onclick="window.location.href='index.html'">↩ Выйти</button>
     </div>
   </aside>
 
@@ -330,6 +330,7 @@ const API = (endpoint, options = {}) => {
                 <th style="width:46px">Поз.</th>
                 <th>Название</th><th>Категория</th><th>Бренд</th>
                 <th>Цена / шт</th><th>Кол.уп.</th><th>Цена уп.</th><th>Метки</th>
+                <th>Статус</th>
                 <th style="width:100px">Действия</th>
               </tr>
             </thead>
@@ -470,6 +471,16 @@ CREATE POLICY "Auth write products"   ON products   FOR ALL USING (auth.role() =
         <label>Позиция в категории</label>
         <input type="number" id="prod-order" placeholder="1" min="1">
         <div class="hint">Меньше — выше в списке</div>
+      </div>
+
+      <hr class="div">
+
+      <div class="fg">
+        <label>Отображение</label>
+        <label class="label-pick" id="lp-visible">
+          <input type="checkbox" id="prod-visible" onchange="syncL('lp-visible','prod-visible')">
+          <span class="lico">👁️</span> Показывать в каталоге
+        </label>
       </div>
 
       <hr class="div">
@@ -809,7 +820,7 @@ async function renderProds() {
   document.getElementById('prod-count').textContent = `${prods.length} всего`;
   const body = document.getElementById('prods-body');
   if (!prods.length) {
-    body.innerHTML = `<tr><td colspan="10">${emptyHtml('📦','Ничего не найдено','Попробуйте другой фильтр')}</td></tr>`;
+    body.innerHTML = `<tr><td colspan="11">${emptyHtml('📦','Ничего не найдено','Попробуйте другой фильтр')}</td></tr>`;
     return;
   }
   body.innerHTML = prods.map(p => {
@@ -817,6 +828,8 @@ async function renderProds() {
     const brandObj = p.brands;
     const pack     = p.price_per_unit * (p.qty_per_pack || 1);
     const badges   = (p.labels || []).map(l => `<span class="badge ${LMAP[l]||'b-muted'}">${l}</span>`).join(' ');
+    const isVisible = p.is_visible !== false;
+    const statusBtn = `<button class="btn btn-xs ${isVisible ? 'btn-ghost' : 'btn-danger'}" onclick="toggleVisibility('${p.id}', ${isVisible})" style="font-size:10px">${isVisible ? '👁️ Виден' : '🚫 Скрыт'}</button>`;
     return `<tr>
       <td><div class="thumb">${p.image_public_id ? `<img src="${cloudinaryUrl(p.image_public_id)}" alt="">` : '📦'}</div></td>
       <td><span class="pos${p.display_order<=3?' a':''}">${p.display_order}</span></td>
@@ -827,6 +840,7 @@ async function renderProds() {
       <td style="color:var(--muted);font-size:12px;text-align:center">${p.qty_per_pack||1} шт</td>
       <td style="font-weight:600;color:var(--accent)">${pack.toLocaleString()} ₸</td>
       <td>${badges||'<span style="color:var(--muted2);font-size:12px">—</span>'}</td>
+      <td>${statusBtn}</td>
       <td><div class="td-act">
         <button class="btn btn-xs btn-ghost" onclick="openProdModal('${p.id}')">✏️</button>
         <button class="btn btn-xs btn-danger" onclick="confirmDel('prod','${p.id}','«${p.name}»',0)">✕</button>
@@ -854,6 +868,8 @@ async function openProdModal(id) {
         cb.checked = p.labels && p.labels.includes(lbl);
         syncL(LPFX[inputId], inputId);
       });
+      document.getElementById('prod-visible').checked = p.is_visible !== false;
+      syncL('lp-visible', 'prod-visible');
       // Покажем текущее фото если есть
       const prev = document.getElementById('upload-prev');
       if (p.image_public_id) {
@@ -876,6 +892,8 @@ async function openProdModal(id) {
     document.getElementById('prod-qty').value = 1;
     document.getElementById('prod-order').value = (await API('products?select=display_order')).length + 1;
     LIDS.forEach(([inputId]) => { document.getElementById(inputId).checked = false; syncL(LPFX[inputId], inputId); });
+    document.getElementById('prod-visible').checked = true;
+    syncL('lp-visible', 'prod-visible');
     document.getElementById('upload-prev').style.display = 'none';
     document.getElementById('upload-ph').style.display = '';
   }
@@ -894,6 +912,17 @@ function calcPack() {
 
 function syncL(pickId,inputId) {
   document.getElementById(pickId).classList.toggle('on', document.getElementById(inputId).checked);
+}
+
+async function toggleVisibility(id, currentStatus) {
+  try {
+    await API(`products?id=eq.${id}`, { method: 'PATCH', body: { is_visible: !currentStatus } });
+    toast('Статус обновлён', 's');
+    await renderProds();
+  } catch (e) {
+    toast('Ошибка обновления', 'e');
+    console.error(e);
+  }
 }
 
 function onFile(input) {
@@ -971,7 +1000,8 @@ async function saveProd() {
       qty_per_pack: parseInt(document.getElementById('prod-qty').value) || 1,
       display_order: parseInt(document.getElementById('prod-order').value) || 999,
       labels,
-      image_public_id
+      image_public_id,
+      is_visible: document.getElementById('prod-visible').checked
     };
 
     if (id) {
