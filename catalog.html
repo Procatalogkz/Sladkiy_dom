@@ -88,13 +88,23 @@
       }
 
       .product-img {
-        max-height: 50vh;
-        width: auto;
-        max-width: 90%;
-        border-radius: var(--radius);
+        /* Задаем фиксированную область для фото */
+        width: 100%;
+        height: 50vh;
+        /* Магия выравнивания */
         object-fit: contain;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        object-position: center;
+        /* Фон и декор */
+        background: transparent;
+        border-radius: var(--radius);
+        transition: transform 0.3s ease;
         cursor: pointer;
+      }
+      /* На мобильных можно чуть уменьшить высоту, чтобы текст влез без скролла */
+      @media (max-width: 600px) {
+        .product-img {
+          height: 45vh;
+        }
       }
 
       .product-body {
@@ -104,9 +114,42 @@
         margin-top: 20px;
       }
 
-      .price-item {
+      /* Обновленные стили для цен */
+      .price-container {
         display: flex;
-        flex-direction: column;
+        justify-content: center;
+        align-items: baseline;
+        gap: 40px;
+        margin-top: 20px;
+        padding: 15px 0;
+      }
+      .price-item {
+        text-align: center;
+      }
+      .price-label {
+        display: block;
+        font-size: 10px;
+        font-weight: 700;
+        color: #a1a1a6;
+        letter-spacing: 1px;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+      }
+      .price-value {
+        font-family: 'Inter', 'Roboto', sans-serif;
+        font-size: 32px;
+        font-weight: 900;
+        color: var(--text);
+        line-height: 1;
+      }
+      .price-value span {
+        font-size: 20px;
+        font-weight: 500;
+        margin-left: 4px;
+        color: var(--muted);
+      }
+      .price-value.accent {
+        color: var(--accent);
       }
 
       /* Метки (badges) */
@@ -152,14 +195,15 @@
       @media (max-width: 600px) {
         .product-img { max-height: 40vh; }
         .product-body h2 { font-size: 20px; }
-        .price-item div { font-size: 18px !important; }
+        .price-value { font-size: 28px !important; }
+        .price-value span { font-size: 18px !important; }
       }
     </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <div class="logo">🛍 Каталог</div>
+      <div class="logo" style="cursor:pointer" onclick="window.location.href='index.html'">🛍 Каталог</div>
     </div>
 
     <!-- Фильтры -->
@@ -207,8 +251,11 @@
     };
 
     function cloudinaryUrl(publicId) {
-      if (!publicId) return 'https://via.placeholder.com/400x300?text=No+Photo';
-      return `https://res.cloudinary.com/${CLOUDINARY_NAME}/image/upload/f_auto,q_auto,w_800/v1/${publicId}`;
+      if (!publicId) return 'https://via.placeholder.com/800x800?text=No+Photo';
+      // c_pad — добавляет пустые поля, чтобы подогнать под размер без обрезки
+      // h_800,w_800 — делает "холст" квадратным 
+      // b_transparent — делает поля прозрачными
+      return `https://res.cloudinary.com/${CLOUDINARY_NAME}/image/upload/c_pad,b_transparent,h_800,w_800,f_auto,q_auto/v1/${publicId}`;
     }
 
     // Состояние
@@ -267,23 +314,23 @@
           <div class="product-card">
             <img class="product-img" src="${cloudinaryUrl(p.image_public_id)}" alt="${escapeHtml(p.name)}" onclick="openImageModal(this.src)">
             <div class="product-body">
-              <div style="font-size: 14px; color: var(--muted); margin-bottom: 8px;">
-                <span style="color: #d4a017; font-weight: 600;">${p.categories?.name || ''}</span>
-                ${p.categories?.name && p.brands?.name ? ' • ' : ''}
-                <span style="color: #2ecc71; font-weight: 600;">${p.brands?.name || ''}</span>
+              <div style="font-size: 13px; margin-bottom: 10px; letter-spacing: 0.5px;">
+                <span style="color: #d4a017; font-weight: 700; text-transform: uppercase;">${p.categories?.name || ''}</span>
+                ${p.categories?.name && p.brands?.name ? ' <span style="color: #ddd">|</span> ' : ''}
+                <span style="color: #2ecc71; font-weight: 700; text-transform: uppercase;">${p.brands?.name || ''}</span>
               </div>
-              <h2 style="font-size: 24px; margin-bottom: 15px;">${p.name}</h2>
-              <div style="display: flex; justify-content: center; gap: 30px; background: white; padding: 20px; border-radius: 20px;">
+              <h2 style="font-size: 28px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 25px;">${p.name}</h2>
+              <div class="price-container">
                 <div class="price-item">
-                  <span style="font-size: 11px; color: var(--muted);">1 ШТУКА</span>
-                  <div style="font-size: 22px; font-weight: 800; color: #0066cc;">${(p.price_per_unit || 0).toLocaleString()} ₸</div>
+                  <span class="price-label">1 ШТУКА</span>
+                  <div class="price-value accent">${(p.price_per_unit || 0).toLocaleString()}<span>₸</span></div>
                 </div>
                 <div class="price-item">
-                  <span style="font-size: 11px; color: var(--muted);">УПАКОВКА (${qty} шт)</span>
-                  <div style="font-size: 22px; font-weight: 800;">${packPrice.toLocaleString()} ₸</div>
+                  <span class="price-label">УПАКОВКА (${qty})</span>
+                  <div class="price-value">${packPrice.toLocaleString()}<span>₸</span></div>
                 </div>
               </div>
-              ${badgesHtml ? `<div style="margin-top: 15px;">${badgesHtml}</div>` : ''}
+              ${badgesHtml ? `<div style="margin-top: 25px;">${badgesHtml}</div>` : ''}
             </div>
           </div>`;
       }).join('');

@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Админ-панель — Каталог</title>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;700&family=Golos+Text:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -191,6 +191,224 @@ pre.code{background:var(--bg3);border:1px solid var(--border);border-radius:var(
   .page-wrap{padding:16px}
   .topbar{padding:0 16px}
 }
+
+/* 📱 МОБИЛЬНАЯ ВЕРСИЯ (Modern Mobile UI) */
+@media (max-width: 768px) {
+  :root {
+    --sidebar: 0px;
+  }
+  /* Скрываем ненужные элементы в шапке */
+  .sb-logo small, .sb-section, .sb-user, .sb-item span:not(.ico) {
+    display: none !important;
+  }
+  .sb-logo {
+    display: block !important;
+    font-size: 12px !important;
+    padding: 8px 10px !important;
+    text-align: center !important;
+    border-bottom: 1px solid var(--border) !important;
+    cursor: pointer;
+  }
+  /* Выход показываем в мобильном виде */
+  .sb-footer {
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: center !important;
+    align-items: center !important;
+    padding: 8px 10px !important;
+    border-top: 1px solid var(--border) !important;
+    flex: 0 !important;
+    width: 100% !important;
+  }
+  .sb-footer .btn {
+    display: flex !important;
+    font-size: 11px !important;
+    padding: 6px 12px !important;
+    width: 100% !important;
+    justify-content: center !important;
+  }
+  .sb-user {
+    display: none !important;
+  }
+  /* Нижняя навигация (Tab Bar) */
+  .sidebar {
+    width: 100% !important;
+    height: 75px !important;
+    top: auto !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    flex-direction: column !important;
+    border-right: none !important;
+    border-top: 1px solid var(--border);
+    padding: 0 !important;
+    background: rgba(19, 19, 19, 0.95);
+    backdrop-filter: blur(10px);
+  }
+  .sb-nav {
+    flex-direction: row !important;
+    justify-content: space-around !important;
+    align-items: center !important;
+    width: 100% !important;
+    padding: 8px 10px !important;
+    overflow: hidden !important;
+    flex: 1 !important;
+  }
+  .sb-item {
+    flex-direction: column !important;
+    gap: 4px !important;
+    padding: 8px !important;
+    border-radius: 12px !important;
+    flex: 1 !important;
+    justify-content: center !important;
+  }
+  .sb-item .ico {
+    font-size: 20px !important;
+    margin: 0 !important;
+  }
+  /* Бейджи над иконками */
+  .sb-item .bc {
+    position: absolute;
+    top: 5px;
+    right: 15%;
+    display: block !important;
+    font-size: 8px !important;
+    padding: 1px 4px !important;
+  }
+  /* Основной контент */
+  .main {
+    margin-left: 0 !important;
+    padding-bottom: 80px;
+  }
+  .topbar {
+    padding: 0 15px !important;
+    height: 60px !important;
+  }
+  .page-wrap {
+    padding: 15px !important;
+  }
+  /* Превращаем таблицы в карточки */
+  table, thead, tbody, th, td, tr {
+    display: block !important;
+  }
+  thead {
+    display: none !important;
+  }
+  .tbl-wrap {
+    background: transparent !important;
+    border: none !important;
+  }
+  tbody tr {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--r2);
+    margin-bottom: 16px;
+    padding: 16px;
+    display: flex !important;
+    flex-direction: column;
+    gap: 12px;
+  }
+  /* Увеличиваем фото и центрируем его */
+  td:has(.thumb) {
+    display: flex !important;
+    justify-content: center !important;
+    width: 100% !important;
+    padding: 0 0 10px 0 !important;
+    border-bottom: 1px solid var(--border) !important;
+  }
+  .thumb {
+    width: 120px !important;
+    height: 120px !important;
+    border-radius: 12px !important;
+  }
+  .thumb img {
+    width: 100%;
+    height: 100%;
+  }
+  /* Название категории/товара/бренда — делаем акцентным */
+  td:has(strong) {
+    font-size: 16px !important;
+    color: var(--text) !important;
+    padding: 8px 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    text-align: left !important;
+    font-weight: 600 !important;
+    width: 100% !important;
+  }
+  td:has(strong) strong {
+    flex: 1 !important;
+  }
+  /* Для категорий — явный стиль */
+  #cats-body td strong {
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    color: var(--text) !important;
+  }
+  /* Остальные данные выравниваем в ряд "ключ-значение" */
+  td {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 4px 0 !important;
+    font-size: 13px !important;
+    border-bottom: 1px dotted var(--border2) !important;
+  }
+  /* Убираем лишние элементы, которые не несут смысла в строке */
+  /* Скрываем только позицию для товаров (4-я колонка в products) */
+  #prods-body td:has(.pos) {
+    display: none !important;
+  }
+  /* Для категорий и брендов показываем название */
+  #cats-body td:nth-child(2), #brands-body td:nth-child(1) {
+    display: block !important;
+    width: 100% !important;
+    padding: 8px 0 !important;
+    border-bottom: 1px solid var(--border) !important;
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    color: var(--text) !important;
+  }
+  #cats-body td:nth-child(2) strong, #brands-body td:nth-child(1) strong {
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    color: var(--text) !important;
+  }
+  /* Блок действий в самом низу */
+  .td-act {
+    margin-top: 10px;
+    padding-top: 15px !important;
+    border-top: 1px solid var(--border) !important;
+    border-bottom: none !important;
+    display: flex !important;
+    gap: 10px !important;
+  }
+  .td-act .btn {
+    flex: 1;
+    justify-content: center;
+    padding: 10px !important;
+  }
+  /* Кнопки и формы */
+  .stats-row {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+  }
+  .stat {
+    padding: 12px !important;
+  }
+  .stat-val {
+    font-size: 20px !important;
+  }
+  .frow, .frow3 {
+    grid-template-columns: 1fr !important;
+  }
+  /* Модальные окна */
+  .modal {
+    width: 100% !important;
+    height: 100% !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+  }
+}
 </style>
 </head>
 <body>
@@ -238,15 +456,13 @@ const API = (endpoint, options = {}) => {
 
   <!-- ═══ SIDEBAR ═══ -->
   <aside class="sidebar">
-    <div class="sb-logo">CATALOG<br>PRO<small>Admin Panel</small></div>
+    <div class="sb-logo" style="cursor:pointer" onclick="window.location.href='index.html'">ProCatalogKz<br><small>Admin Panel</small></div>
     <nav class="sb-nav">
       <div class="sb-section">Контент</div>
       <div class="sb-item active" id="nav-dash"     onclick="go('dash')">     <span class="ico">📊</span><span>Дашборд</span></div>
       <div class="sb-item"        id="nav-cats"     onclick="go('cats')">     <span class="ico">📂</span><span>Категории</span>  <span class="bc" id="cnt-cats">0</span></div>
       <div class="sb-item"        id="nav-brands"   onclick="go('brands')">   <span class="ico">🏷️</span><span>Бренды / ТМ</span><span class="bc" id="cnt-brands">0</span></div>
       <div class="sb-item"        id="nav-products" onclick="go('products')"> <span class="ico">📦</span><span>Товары</span>     <span class="bc" id="cnt-prods">0</span></div>
-      <div class="sb-section">Система</div>
-      <div class="sb-item"        id="nav-settings" onclick="go('settings')"> <span class="ico">⚙️</span><span>Настройки API</span></div>
     </nav>
     <div class="sb-footer">
       <div class="sb-user">
@@ -336,50 +552,6 @@ const API = (endpoint, options = {}) => {
             </thead>
             <tbody id="prods-body"></tbody>
           </table>
-        </div>
-      </div>
-
-      <!-- ── SETTINGS ── -->
-      <div id="page-settings" style="display:none">
-        <div class="panel">
-          <div class="panel-head"><div class="panel-title">🔌 Supabase</div></div>
-          <div class="panel-body">
-            <div class="frow">
-              <div class="fg"><label>Project URL</label><input type="url" value="YOUR_SUPABASE_URL" readonly></div>
-              <div class="fg"><label>Anon Key</label><input type="text" value="YOUR_SUPABASE_ANON_KEY" readonly></div>
-            </div>
-            <div class="hint">Чтобы изменить — откройте код и замените константы SUPABASE_URL и SUPABASE_KEY в начале файла.</div>
-          </div>
-        </div>
-        <div class="panel">
-          <div class="panel-head"><div class="panel-title">☁️ Cloudinary</div></div>
-          <div class="panel-body">
-            <div class="frow">
-              <div class="fg"><label>Cloud Name</label><input type="text" value="YOUR_CLOUD_NAME" readonly></div>
-              <div class="fg"><label>Upload Preset</label><input type="text" value="YOUR_UPLOAD_PRESET" readonly></div>
-            </div>
-            <div class="hint">Чтобы изменить — откройте код и замените CLOUDINARY_NAME и CLOUDINARY_PRESET в начале файла.</div>
-          </div>
-        </div>
-        <div class="panel">
-          <div class="panel-head"><div class="panel-title">📋 SQL — настройка RLS в Supabase</div></div>
-          <div class="panel-body">
-            <div class="hint" style="margin-bottom:14px">Выполните в Supabase → SQL Editor:</div>
-<pre class="code">-- Включить RLS
-ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
-ALTER TABLE brands     ENABLE ROW LEVEL SECURITY;
-ALTER TABLE products   ENABLE ROW LEVEL SECURITY;
-
--- Анонимное чтение (для витрины)
-CREATE POLICY "Public read categories" ON categories FOR SELECT USING (true);
-CREATE POLICY "Public read brands"     ON brands     FOR SELECT USING (true);
-CREATE POLICY "Public read products"   ON products   FOR SELECT USING (true);
-
--- Запись только авторизованным (для admin.html)
-CREATE POLICY "Auth write categories" ON categories FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Auth write brands"     ON brands     FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Auth write products"   ON products   FOR ALL USING (auth.role() = 'authenticated');</pre>
-          </div>
         </div>
       </div>
 
@@ -540,8 +712,8 @@ CREATE POLICY "Auth write products"   ON products   FOR ALL USING (auth.role() =
 // ═══════════════════════════════════════════════════════
 // NAVIGATION
 // ═══════════════════════════════════════════════════════
-const PAGES = ['dash','cats','brands','products','settings'];
-const TITLES = { dash:'Дашборд', cats:'Категории', brands:'Бренды / ТМ', products:'Товары', settings:'Настройки API' };
+const PAGES = ['dash','cats','brands','products'];
+const TITLES = { dash:'Дашборд', cats:'Категории', brands:'Бренды / ТМ', products:'Товары' };
 const ACTIONS = {
   cats:     ()=>`<button class="btn btn-primary btn-sm" onclick="openCatModal()">+ Категория</button>`,
   brands:   ()=>`<button class="btn btn-primary btn-sm" onclick="openBrandModal()">+ Бренд</button>`,
