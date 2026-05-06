@@ -35,10 +35,20 @@
       }
 
       /* Шапка */
+      /* Убираем лишние отступы у шапки и фильтров */
       .header { 
         flex-shrink: 0;
-        margin-bottom: 0; 
-        padding: 16px 16px 0; 
+        padding: 10px 16px 5px;
+        background: var(--bg);
+        z-index: 10;
+      }
+      .filters { 
+        flex-shrink: 0;
+        padding: 0 16px 10px;
+        display: flex; 
+        gap: 8px; 
+        flex-wrap: wrap; 
+        align-items: center; 
         background: var(--bg);
         z-index: 10;
       }
@@ -49,10 +59,10 @@
         flex-shrink: 0;
         padding: 0 16px; 
         margin-bottom: 0; 
-        display: flex; 
+        display: flex;
         gap: 8px; 
         flex-wrap: wrap; 
-        align-items: center; 
+        align-items: center;
         background: var(--bg);
         z-index: 10;
       }
@@ -64,13 +74,13 @@
 
       /* Контейнер-лента */
       #products-container {
-        height: 100%;
+        flex: 1;
         overflow-y: scroll;
         scroll-snap-type: y mandatory;
         display: flex;
         flex-direction: column;
+        margin-top: 0;
       }
-
       /* Карточка на весь экран */
       .product-card {
         min-height: 100vh;
@@ -78,9 +88,9 @@
         scroll-snap-align: start;
         display: flex;
         flex-direction: column;
-        justify-content: center;
+        justify-content: flex-start;
         align-items: center;
-        padding: 20px;
+        padding: 0 20px 20px;
         box-sizing: border-box;
         background: var(--bg);
         border: none;
@@ -88,22 +98,16 @@
       }
 
       .product-img {
-        /* Задаем фиксированную область для фото */
-        width: 100%;
-        height: 50vh;
-        /* Магия выравнивания */
+        margin-top: 60px;
+        max-height: 50vh;
+        width: auto;
+        max-width: 95%;
         object-fit: contain;
-        object-position: center;
-        /* Фон и декор */
-        background: transparent;
-        border-radius: var(--radius);
-        transition: transform 0.3s ease;
-        cursor: pointer;
       }
       /* На мобильных можно чуть уменьшить высоту, чтобы текст влез без скролла */
       @media (max-width: 600px) {
         .product-img {
-          height: 45vh;
+          max-height: 45vh;
         }
       }
 
@@ -251,11 +255,11 @@
     };
 
     function cloudinaryUrl(publicId) {
-      if (!publicId) return 'https://via.placeholder.com/800x800?text=No+Photo';
+      if (!publicId) return 'https://via.placeholder.com/900x900?text=No+Photo';
       // c_pad — добавляет пустые поля, чтобы подогнать под размер без обрезки
-      // h_800,w_800 — делает "холст" квадратным 
+      // h_900,w_900 — делает "холст" квадратным 900x900
       // b_transparent — делает поля прозрачными
-      return `https://res.cloudinary.com/${CLOUDINARY_NAME}/image/upload/c_pad,b_transparent,h_800,w_800,f_auto,q_auto/v1/${publicId}`;
+      return `https://res.cloudinary.com/${CLOUDINARY_NAME}/image/upload/c_pad,b_transparent,h_900,w_900,f_auto,q_auto/v1/${publicId}`;
     }
 
     // Состояние

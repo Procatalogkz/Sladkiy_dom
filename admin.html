@@ -197,17 +197,18 @@ pre.code{background:var(--bg3);border:1px solid var(--border);border-radius:var(
   :root {
     --sidebar: 0px;
   }
-  /* Скрываем ненужные элементы в шапке */
-  .sb-logo small, .sb-section, .sb-user, .sb-item span:not(.ico) {
+  /* Логотип в верхнем бар - перемещаем туда */
+  .sb-logo {
     display: none !important;
   }
-  .sb-logo {
-    display: block !important;
-    font-size: 12px !important;
-    padding: 8px 10px !important;
-    text-align: center !important;
-    border-bottom: 1px solid var(--border) !important;
-    cursor: pointer;
+  .sb-logo small {
+    display: none !important;
+  }
+  .sb-section {
+    display: none !important;
+  }
+  .sb-user, .sb-item span:not(.ico) {
+    display: none !important;
   }
   /* Выход показываем в мобильном виде */
   .sb-footer {
@@ -215,25 +216,22 @@ pre.code{background:var(--bg3);border:1px solid var(--border);border-radius:var(
     flex-direction: row !important;
     justify-content: center !important;
     align-items: center !important;
-    padding: 8px 10px !important;
+    padding: 8px 10px 5px !important;
     border-top: 1px solid var(--border) !important;
     flex: 0 !important;
     width: 100% !important;
   }
   .sb-footer .btn {
     display: flex !important;
-    font-size: 11px !important;
-    padding: 6px 12px !important;
+    font-size: 13px !important;
+    padding: 8px 12px !important;
     width: 100% !important;
     justify-content: center !important;
-  }
-  .sb-user {
-    display: none !important;
   }
   /* Нижняя навигация (Tab Bar) */
   .sidebar {
     width: 100% !important;
-    height: 75px !important;
+    height: 85px !important;
     top: auto !important;
     bottom: 0 !important;
     left: 0 !important;
@@ -255,14 +253,14 @@ pre.code{background:var(--bg3);border:1px solid var(--border);border-radius:var(
   }
   .sb-item {
     flex-direction: column !important;
-    gap: 4px !important;
-    padding: 8px !important;
+    gap: 5px !important;
+    padding: 10px !important;
     border-radius: 12px !important;
     flex: 1 !important;
     justify-content: center !important;
   }
   .sb-item .ico {
-    font-size: 20px !important;
+    font-size: 22px !important;
     margin: 0 !important;
   }
   /* Бейджи над иконками */
@@ -279,9 +277,14 @@ pre.code{background:var(--bg3);border:1px solid var(--border);border-radius:var(
     margin-left: 0 !important;
     padding-bottom: 80px;
   }
+  /* Верхний бар */
   .topbar {
     padding: 0 15px !important;
     height: 60px !important;
+  }
+  .topbar-title {
+    font-weight: 600 !important;
+    font-size: 16px !important;
   }
   .page-wrap {
     padding: 15px !important;
@@ -479,7 +482,7 @@ const API = (endpoint, options = {}) => {
   <!-- ═══ MAIN ═══ -->
   <div class="main">
     <div class="topbar">
-      <div class="topbar-title" id="topbar-title">Дашборд</div>
+      <div class="topbar-title" id="topbar-title" style="cursor:pointer" onclick="window.location.href='index.html'">ProCatalogKz</div>
       <div id="topbar-actions"></div>
     </div>
     <div class="page-wrap">
@@ -726,7 +729,16 @@ function go(page) {
     const n = document.getElementById('nav-'+p);
     if(n) n.classList.toggle('active', p===page);
   });
-  document.getElementById('topbar-title').textContent = TITLES[page]||page;
+  const topbarTitle = document.getElementById('topbar-title');
+  if (page === 'dash') {
+    topbarTitle.textContent = 'ProCatalogKz';
+    topbarTitle.style.cursor = 'pointer';
+    topbarTitle.onclick = () => window.location.href='index.html';
+  } else {
+    topbarTitle.textContent = TITLES[page]||page;
+    topbarTitle.style.cursor = 'default';
+    topbarTitle.onclick = null;
+  }
   document.getElementById('topbar-actions').innerHTML = ACTIONS[page] ? ACTIONS[page]() : '';
   if(page==='cats')     renderCats();
   if(page==='brands')   renderBrands();
