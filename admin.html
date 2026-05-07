@@ -177,6 +177,31 @@ hr.div{border:none;border-top:1px solid var(--border);margin:20px 0}
 /* CODE BLOCK */
 pre.code{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:16px;font-size:12px;line-height:1.7;overflow-x:auto;color:#a8d8a8;font-family:monospace}
 
+/* FOLDER TREE */
+.folder-row{background:var(--bg3);border-bottom:1px solid var(--border)}
+.folder-row td{padding:14px 16px!important;vertical-align:middle}
+.folder-name{font-family:var(--fh);font-size:11px;font-weight:700;color:var(--text);letter-spacing:.02em;display:flex;align-items:center;gap:8px}
+.folder-toggle{cursor:pointer;font-size:18px;width:22px;text-align:center;flex-shrink:0;user-select:none;transition:transform .2s}
+.folder-toggle.open{transform:rotate(0deg)}
+.folder-toggle.closed{transform:rotate(-90deg)}
+.cat-child-row td{padding:11px 16px 11px 48px!important}
+.cat-child-row{border-bottom:1px solid var(--border)}
+.cat-child-row:last-child{border-bottom:none}
+.cat-indent{display:flex;align-items:center;gap:8px}
+.cat-indent::before{content:'└';color:var(--muted2);font-size:14px;flex-shrink:0}
+.folder-count{font-size:11px;color:var(--muted);font-weight:400}
+.no-folders{padding:40px 20px;text-align:center;color:var(--muted);font-size:13px}
+.folder-block{border:1px solid var(--border);border-radius:var(--r2);margin-bottom:12px;overflow:hidden}
+.folder-btn{width:100%;background:var(--bg3);border:none;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;color:var(--text);font-family:var(--fh);font-size:11px;font-weight:700;letter-spacing:.04em;text-align:left;transition:background .15s;gap:12px}
+.folder-btn:hover{background:var(--bg4)}
+.folder-btn-left{display:flex;align-items:center;gap:10px}
+.folder-btn-arrow{font-size:12px;color:var(--muted);transition:transform .2s;flex-shrink:0}
+.folder-btn-arrow.open{transform:rotate(90deg)}
+.folder-children{display:none;border-top:1px solid var(--border)}
+.folder-children.open{display:block}
+.folder-children table{width:100%}
+.folder-children th{background:var(--bg2)}
+
 @media(max-width:960px){
   :root{--sidebar:60px}
   .sb-logo small,.sb-item span:not(.ico),.sb-section,.sb-uname,.sb-urole,.sb-logo br+*,.bc{display:none}
@@ -509,9 +534,22 @@ const API = (endpoint, options = {}) => {
 
       <!-- ── CATEGORIES ── -->
       <div id="page-cats" style="display:none">
+        <div class="toolbar" style="margin-bottom:14px">
+          <button class="btn btn-primary btn-sm" onclick="openFolderModal()">📁 + Папка</button>
+          <button class="btn btn-sm" onclick="openCatModal()">📂 + Категория</button>
+        </div>
+        <div id="cats-accordion" style="margin-bottom:4px"></div>
         <div class="tbl-wrap">
           <table>
-            <thead><tr><th style="width:50px">Позиция</th><th>Название</th><th>Кол-во товаров</th><th style="width:160px">Действия</th></tr></thead>
+            <thead>
+              <tr>
+                <th style="width:36px"></th>
+                <th>Название</th>
+                <th style="width:110px">Тип</th>
+                <th style="width:110px">Товаров</th>
+                <th style="width:170px">Действия</th>
+              </tr>
+            </thead>
             <tbody id="cats-body"></tbody>
           </table>
         </div>
@@ -564,6 +602,30 @@ const API = (endpoint, options = {}) => {
 
 <!-- ═══════════════ MODALS ═══════════════ -->
 
+<!-- FOLDER -->
+<div class="overlay" id="m-folder">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title" id="m-folder-title">Новая папка</div><button class="modal-x" onclick="closeM('m-folder')">×</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="folder-id">
+      <div class="fg">
+        <label>Название папки *</label>
+        <input type="text" id="folder-name" placeholder="Например: Кондитерка">
+        <div class="hint">Папка группирует категории. Товары привязываются к категориям, не к папкам.</div>
+      </div>
+      <div class="fg" style="max-width:200px">
+        <label>Порядковый номер</label>
+        <input type="number" id="folder-order" placeholder="1" min="1">
+        <div class="hint">Меньше число — выше в списке</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeM('m-folder')">Отмена</button>
+      <button class="btn btn-primary" onclick="saveFolder()">Сохранить папку</button>
+    </div>
+  </div>
+</div>
+
 <!-- CATEGORY -->
 <div class="overlay" id="m-cat">
   <div class="modal">
@@ -571,8 +633,13 @@ const API = (endpoint, options = {}) => {
     <div class="modal-body">
       <input type="hidden" id="cat-id">
       <div class="fg">
+        <label>Папка *</label>
+        <select id="cat-folder-sel"><option value="">— выберите папку —</option></select>
+        <div class="hint">Категория создаётся внутри папки</div>
+      </div>
+      <div class="fg">
         <label>Название категории *</label>
-        <input type="text" id="cat-name" placeholder="Например: Электроника">
+        <input type="text" id="cat-name" placeholder="Например: Мармелад">
       </div>
       <div class="fg" style="max-width:200px">
         <label>Порядковый номер</label>
@@ -718,7 +785,6 @@ const API = (endpoint, options = {}) => {
 const PAGES = ['dash','cats','brands','products'];
 const TITLES = { dash:'Дашборд', cats:'Категории', brands:'Бренды / ТМ', products:'Товары' };
 const ACTIONS = {
-  cats:     ()=>`<button class="btn btn-primary btn-sm" onclick="openCatModal()">+ Категория</button>`,
   brands:   ()=>`<button class="btn btn-primary btn-sm" onclick="openBrandModal()">+ Бренд</button>`,
   products: ()=>`<button class="btn btn-primary btn-sm" onclick="openProdModal()">+ Товар</button>`,
 };
@@ -763,21 +829,28 @@ async function renderDash() {
   document.getElementById('st-labels').textContent = prods.filter(p => p.labels && p.labels.length).length;
   await updateCounts(); // тоже обновит счётчики
 
-  // Виджет категорий
+  // Виджет категорий — показываем папки
   const dashCats = document.getElementById('dash-cats');
-  dashCats.innerHTML = cats.length
-    ? cats.map(c => {
-        const cnt = prods.filter(p => p.category_id === c.id).length;
-        return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
-          <div style="display:flex;align-items:center;gap:10px">
-            <span class="pos a">${c.display_order}</span>
-            <span style="font-weight:600">${c.name}</span>
+  const folders = cats.filter(c => !c.parent_id).sort((a,b)=>a.display_order-b.display_order);
+  const catChildren = cats.filter(c => !!c.parent_id);
+  dashCats.innerHTML = folders.length
+    ? folders.map(f => {
+        const kids = catChildren.filter(c => c.parent_id === f.id);
+        const totalProds = kids.reduce((sum, c) => sum + prods.filter(p => p.category_id === c.id).length, 0);
+        return `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <div style="display:flex;align-items:center;gap:8px;font-weight:700;font-size:13px">
+              📁 ${f.name}
+            </div>
+            <span style="font-size:11px;color:var(--muted)">${kids.length} кат. · ${totalProds} тов.</span>
           </div>
-          <span style="font-size:12px;color:var(--muted)">${cnt} тов.</span>
+          ${kids.length ? `<div style="margin-top:6px;padding-left:20px;display:flex;flex-wrap:wrap;gap:5px">
+            ${kids.map(c=>`<span style="font-size:11px;background:var(--bg3);padding:2px 8px;border-radius:6px;color:var(--muted)">${c.name}</span>`).join('')}
+          </div>` : ''}
         </div>`;
       }).join('')
       + `<button class="btn btn-ghost btn-sm" style="margin-top:12px;width:100%;justify-content:center" onclick="go('cats')">Все категории →</button>`
-    : emptyHtml('📂','Нет категорий','');
+    : emptyHtml('📂','Нет папок','');
 
   // Виджет товаров (последние 5)
   const dashProds = document.getElementById('dash-prods');
@@ -801,45 +874,180 @@ async function renderDash() {
 function emptyHtml(ico,t,s){ return `<div class="empty" style="padding:24px"><div class="empty-ico">${ico}</div><div class="empty-t">${t}</div>${s?`<div class="empty-s">${s}</div>`:''}</div>`; }
 
 // ═══════════════════════════════════════════════════════
-// CATEGORIES
+// CATEGORIES (с папками через parent_id) - АККОРДЕОН
 // ═══════════════════════════════════════════════════════
+
+// Состояние свёрнутых папок
+const _folderOpen = {};
+
 async function renderCats() {
-  const cats = await API('categories?order=display_order');
-  const prods = await API('products?select=category_id');
-  const body = document.getElementById('cats-body');
-  if (!cats.length) {
-    body.innerHTML = `<tr><td colspan="4">${emptyHtml('📂','Нет категорий','Добавьте первую категорию')}</td></tr>`;
+  const allCats = await API('categories?order=display_order');
+  const prods   = await API('products?select=category_id');
+  
+  const folders  = allCats.filter(c => !c.parent_id).sort((a,b)=>a.display_order-b.display_order);
+  const children = allCats.filter(c => !!c.parent_id);
+  const folderIds = folders.map(f => f.id);
+
+  const container = document.getElementById('cats-accordion');
+  container.innerHTML = '';
+
+  if (!allCats.length) {
+    container.innerHTML = `<div class="empty"><div class="empty-ico">📂</div><div class="empty-t">Нет папок и категорий</div><div class="empty-s">Начните с создания папки</div></div>`;
     return;
   }
-  body.innerHTML = cats.map(c => {
-    const cnt = prods.filter(p => p.category_id === c.id).length;
-    return `<tr>
-      <td><span class="pos a">${c.display_order}</span></td>
-      <td><strong>${c.name}</strong></td>
-      <td><span style="color:var(--muted)">${cnt} товар${plural(cnt)}</span></td>
-      <td><div class="td-act">
-        <button class="btn btn-xs btn-ghost" onclick="openCatModal('${c.id}')">✏️ Ред.</button>
-        <button class="btn btn-xs btn-danger" onclick="confirmDel('cat','${c.id}','«${c.name}»',${cnt})">✕</button>
-      </div></td>
-    </tr>`;
-  }).join('');
+
+  // Рендерим каждую папку через аккордеон
+  folders.forEach(folder => {
+    const kids = children.filter(c => c.parent_id === folder.id).sort((a,b)=>a.display_order-b.display_order);
+    const totalProds = kids.reduce((sum,c) => sum + prods.filter(p=>p.category_id===c.id).length, 0);
+    const isOpen = _folderOpen[folder.id] !== false;
+    if (_folderOpen[folder.id] === undefined) _folderOpen[folder.id] = true;
+
+    const kidsHtml = kids.length
+      ? kids.map(cat => {
+          const cnt = prods.filter(p=>p.category_id===cat.id).length;
+          return `<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px 12px 44px;border-bottom:1px solid var(--border)">
+            <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
+              <span style="color:var(--muted2);font-size:13px">└</span>
+              <strong style="font-size:13px">${cat.name}</strong>
+              <span class="pos a" style="font-size:11px">${cat.display_order}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;flex-shrink:0">
+              <span style="font-size:12px;color:var(--muted)">${cnt} тов.</span>
+              <div class="td-act">
+                <button class="btn btn-xs btn-ghost" onclick="openCatModal('${cat.id}','${folder.id}')">✏️ Ред.</button>
+                <button class="btn btn-xs btn-danger" onclick="confirmDel('cat','${cat.id}','«${cat.name}»',${cnt})">✕</button>
+              </div>
+            </div>
+          </div>`;
+        }).join('')
+      : `<div style="padding:14px 18px 14px 44px;font-size:12px;color:var(--muted2);font-style:italic">Нет категорий — нажмите «+ кат.» чтобы добавить</div>`;
+
+    const block = document.createElement('div');
+    block.className = 'folder-block';
+    block.innerHTML = `
+      <button class="folder-btn" onclick="toggleFolder('${folder.id}',this)">
+        <div class="folder-btn-left">
+          <span style="font-size:16px">📁</span>
+          <span>${folder.name}</span>
+          <span class="folder-count" style="font-size:10px;color:var(--muted);font-weight:400">${kids.length} кат. · ${totalProds} тов.</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <button class="btn btn-xs btn-primary" onclick="event.stopPropagation();openCatModal(null,'${folder.id}')">+ кат.</button>
+          <button class="btn btn-xs btn-ghost" onclick="event.stopPropagation();openFolderModal('${folder.id}')">✏️</button>
+          <button class="btn btn-xs btn-danger" onclick="event.stopPropagation();confirmDel('folder','${folder.id}','«${folder.name}»',${kids.length})">✕</button>
+          <span class="folder-btn-arrow ${isOpen?'open':''}">▶</span>
+        </div>
+      </button>
+      <div class="folder-children ${isOpen?'open':''}">
+        ${kidsHtml}
+      </div>`;
+    container.appendChild(block);
+  });
+
+  // Сироты
+  const orphans = children.filter(c => !folderIds.includes(c.parent_id));
+  if (orphans.length) {
+    const block = document.createElement('div');
+    block.className = 'folder-block';
+    block.innerHTML = `<div style="padding:12px 18px;font-size:12px;color:var(--muted);border-bottom:1px solid var(--border)">⚠️ Категории без папки</div>`
+      + orphans.map(cat => {
+          const cnt = prods.filter(p=>p.category_id===cat.id).length;
+          return `<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid var(--border)">
+            <strong>${cat.name}</strong>
+            <div class="td-act">
+              <button class="btn btn-xs btn-ghost" onclick="openCatModal('${cat.id}',null)">✏️</button>
+              <button class="btn btn-xs btn-danger" onclick="confirmDel('cat','${cat.id}','«${cat.name}»',${cnt})">✕</button>
+            </div>
+          </div>`;
+        }).join('');
+    container.appendChild(block);
+  }
+
+  // Скрываем старую таблицу
+  document.querySelector('.tbl-wrap').style.display = 'none';
 }
 
-async function openCatModal(id) {
+function toggleFolder(folderId, btn) {
+  _folderOpen[folderId] = !_folderOpen[folderId];
+  const isOpen = _folderOpen[folderId];
+  const block = btn.closest('.folder-block');
+  block.querySelector('.folder-children').classList.toggle('open', isOpen);
+  block.querySelector('.folder-btn-arrow').classList.toggle('open', isOpen);
+}
+
+// ── FOLDER MODAL ──
+async function openFolderModal(id) {
+  if (id) {
+    const f = await API(`categories?id=eq.${id}&limit=1`);
+    if (f.length) {
+      document.getElementById('m-folder-title').textContent = 'Редактировать папку';
+      document.getElementById('folder-id').value    = f[0].id;
+      document.getElementById('folder-name').value  = f[0].name;
+      document.getElementById('folder-order').value = f[0].display_order;
+    }
+  } else {
+    document.getElementById('m-folder-title').textContent = 'Новая папка';
+    document.getElementById('folder-id').value = '';
+    document.getElementById('folder-name').value = '';
+    const all = await API('categories?parent_id=is.null&order=display_order');
+    const maxOrder = all.length ? Math.max(...all.map(c => c.display_order||0)) : 0;
+    document.getElementById('folder-order').value = maxOrder + 1;
+  }
+  openM('m-folder');
+  setTimeout(() => document.getElementById('folder-name').focus(), 80);
+}
+
+async function saveFolder() {
+  const saveBtn = document.querySelector('#m-folder .btn-primary');
+  if (saveBtn.disabled) return;
+  const orig = saveBtn.textContent;
+  saveBtn.disabled = true; saveBtn.textContent = 'Сохранение...';
+  try {
+    const id    = document.getElementById('folder-id').value;
+    const name  = document.getElementById('folder-name').value.trim();
+    const order = parseInt(document.getElementById('folder-order').value) || 999;
+    if (!name) { document.getElementById('folder-name').focus(); return; }
+    // Папка = parent_id: null, is_folder: true
+    const payload = { name, display_order: order, parent_id: null, is_folder: true };
+    if (id) {
+      await API(`categories?id=eq.${id}`, { method: 'PATCH', body: payload });
+    } else {
+      await API('categories', { method: 'POST', body: payload });
+    }
+    closeM('m-folder');
+    toast(id ? '✅ Папка обновлена' : '✅ Папка создана', 's');
+    await renderCats(); await renderDash();
+  } catch(e) {
+    toast('❌ Ошибка сохранения папки', 'e'); console.error(e);
+  } finally {
+    saveBtn.disabled = false; saveBtn.textContent = orig;
+  }
+}
+    
+// ── CATEGORY MODAL ──
+async function openCatModal(id, preselectedFolderId) {
+  // Загружаем список папок для селекта
+  const folders = await API('categories?parent_id=is.null&order=display_order');
+  const folderOpts = folders.map(f => `<option value="${f.id}">${f.name}</option>`).join('');
+  document.getElementById('cat-folder-sel').innerHTML = '<option value="">— выберите папку —</option>' + folderOpts;
+
   if (id) {
     const c = await API(`categories?id=eq.${id}&limit=1`);
     if (c.length) {
-      document.getElementById('m-cat-title').textContent = 'Редактировать категорию';
-      document.getElementById('cat-id').value    = c[0].id;
-      document.getElementById('cat-name').value  = c[0].name;
-      document.getElementById('cat-order').value = c[0].display_order;
+      document.getElementById('m-cat-title').textContent  = 'Редактировать категорию';
+      document.getElementById('cat-id').value             = c[0].id;
+      document.getElementById('cat-name').value           = c[0].name;
+      document.getElementById('cat-order').value          = c[0].display_order;
+      document.getElementById('cat-folder-sel').value     = c[0].parent_id || '';
     }
   } else {
     document.getElementById('m-cat-title').textContent = 'Новая категория';
-    document.getElementById('cat-id').value = '';
-    document.getElementById('cat-name').value = '';
+    document.getElementById('cat-id').value    = '';
+    document.getElementById('cat-name').value  = '';
+    document.getElementById('cat-folder-sel').value = preselectedFolderId || '';
     const cats = await API('categories?order=display_order');
-    const maxOrder = cats.length ? Math.max(...cats.map(c => c.display_order)) : 0;
+    const maxOrder = cats.length ? Math.max(...cats.map(c => c.display_order||0)) : 0;
     document.getElementById('cat-order').value = maxOrder + 1;
   }
   openM('m-cat');
@@ -849,43 +1057,28 @@ async function openCatModal(id) {
 async function saveCat() {
   const saveBtn = document.querySelector('#m-cat .btn-primary');
   if (saveBtn.disabled) return;
-  const originalText = saveBtn.textContent;
-  saveBtn.disabled = true;
-  saveBtn.textContent = 'Сохранение...';
-  
+  const orig = saveBtn.textContent;
+  saveBtn.disabled = true; saveBtn.textContent = 'Сохранение...';
   try {
-    const id    = document.getElementById('cat-id').value;
-    const name  = document.getElementById('cat-name').value.trim();
-    const order = parseInt(document.getElementById('cat-order').value) || 999;
+    const id        = document.getElementById('cat-id').value;
+    const name      = document.getElementById('cat-name').value.trim();
+    const order     = parseInt(document.getElementById('cat-order').value) || 999;
+    const folderId  = document.getElementById('cat-folder-sel').value || null;
     if (!name) { document.getElementById('cat-name').focus(); return; }
-    
-    const payload = { name, display_order: order };
-
+    // Категория = parent_id: id папки, is_folder: false
+    const payload = { name, display_order: order, parent_id: folderId, is_folder: false };
     if (id) {
       await API(`categories?id=eq.${id}`, { method: 'PATCH', body: payload });
     } else {
       await API('categories', { method: 'POST', body: payload });
     }
-
-    // Успех – закрываем и показываем тост
     closeM('m-cat');
     toast(id ? '✅ Категория обновлена' : '✅ Категория добавлена', 's');
-
-    // Обновление интерфейса (ошибки тут не должны ломать тост)
-    try {
-      await renderCats();
-      await renderDash();
-    } catch (updateError) {
-      console.error('Ошибка обновления интерфейса:', updateError);
-      toast('⚠️ Данные сохранены, но таблица не обновилась. Обновите страницу.', 'i');
-    }
-  } catch (error) {
-    // Настоящая ошибка сохранения
-    toast('❌ Ошибка сохранения категории', 'e');
-    console.error(error);
+    try { await renderCats(); await renderDash(); } catch(e) { console.error(e); }
+  } catch(e) {
+    toast('❌ Ошибка сохранения категории', 'e'); console.error(e);
   } finally {
-    saveBtn.disabled = false;
-    saveBtn.textContent = originalText;
+    saveBtn.disabled = false; saveBtn.textContent = orig;
   }
 }
     
@@ -977,12 +1170,31 @@ const LIDS  = [['l-top','Топ'],['l-shock','Шок цена'],['l-new','Нов
 const LPFX  = {'l-top':'lp-top','l-shock':'lp-shock','l-new':'lp-new','l-hit':'lp-hit'};
 
 async function fillProdSelects() {
-  const cats   = await API('categories?order=display_order');
-  const brands = await API('brands?order=name');
-  const co = cats.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  const allCats = await API('categories?order=display_order');
+  const brands  = await API('brands?order=name');
+
+  // Только категории (у которых есть parent_id) сгруппированные по папкам
+  const folders  = allCats.filter(c => !c.parent_id);
+  const catItems = allCats.filter(c => !!c.parent_id);
+
+  let co = '';
+  folders.forEach(f => {
+    const kids = catItems.filter(c => c.parent_id === f.id);
+    if (kids.length) {
+      co += `<optgroup label="📁 ${f.name}">`;
+      kids.forEach(c => { co += `<option value="${c.id}">${c.name}</option>`; });
+      co += `</optgroup>`;
+    }
+  });
+  // Сироты
+  const folderIds = folders.map(f=>f.id);
+  const orphans = catItems.filter(c => !folderIds.includes(c.parent_id));
+  orphans.forEach(c => { co += `<option value="${c.id}">${c.name}</option>`; });
+
   const bo = brands.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
   document.getElementById('prod-cat').innerHTML   = '<option value="">— категория —</option>' + co;
   document.getElementById('prod-brand').innerHTML = '<option value="">— бренд —</option>' + bo;
+  // Фильтр тоже только категории
   document.getElementById('prod-filter-cat').innerHTML = '<option value="">Все категории</option>' + co;
 }
 
@@ -1218,28 +1430,36 @@ async function saveProd() {
 // ═══════════════════════════════════════════════════════
 async function confirmDel(type, id, label, cnt) {
   const cfg = {
-    cat:  { t:`Удалить категорию ${label}?`,  s:cnt>0?`В ней ${cnt} товар${plural(cnt)} — они останутся без категории.`:'' },
-    brand:{ t:`Удалить бренд ${label}?`,      s:cnt>0?`К нему привязано ${cnt} товар${plural(cnt)}.`:'' },
-    prod: { t:`Удалить товар ${label}?`,       s:'Это действие нельзя отменить.' }
+    folder:{ t:`Удалить папку ${label}?`,      s:cnt>0?`В ней ${cnt} категори${cnt===1?'я':'и'} — они тоже будут удалены!`:'Папка пустая.' },
+    cat:  { t:`Удалить категорию ${label}?`,   s:cnt>0?`В ней ${cnt} товар${plural(cnt)} — они останутся без категории.`:'' },
+    brand:{ t:`Удалить бренд ${label}?`,       s:cnt>0?`К нему привязано ${cnt} товар${plural(cnt)}.`:'' },
+    prod: { t:`Удалить товар ${label}?`,        s:'Это действие нельзя отменить.' }
   };
   document.getElementById('confirm-msg').textContent = cfg[type].t;
   document.getElementById('confirm-sub').textContent = cfg[type].s;
   
   document.getElementById('btn-confirm-ok').onclick = async () => {
-    let endpoint = '';
-    if (type === 'cat')   endpoint = `categories?id=eq.${id}`;
-    if (type === 'brand') endpoint = `brands?id=eq.${id}`;
-    if (type === 'prod')  endpoint = `products?id=eq.${id}`;
-    
     try {
-      await API(endpoint, { method: 'DELETE' });
+      if (type === 'folder') {
+        // Сначала удаляем все дочерние категории
+        const children = await API(`categories?parent_id=eq.${id}`);
+        for (const c of children) {
+          await API(`categories?id=eq.${c.id}`, { method: 'DELETE' });
+        }
+        await API(`categories?id=eq.${id}`, { method: 'DELETE' });
+      } else if (type === 'cat') {
+        await API(`categories?id=eq.${id}`, { method: 'DELETE' });
+      } else if (type === 'brand') {
+        await API(`brands?id=eq.${id}`, { method: 'DELETE' });
+      } else if (type === 'prod') {
+        await API(`products?id=eq.${id}`, { method: 'DELETE' });
+      }
       toast('Удалено', 's');
     } catch (e) {
       toast('Ошибка удаления', 'e');
     }
-    
     closeM('m-confirm');
-    if (type === 'cat')   await renderCats();
+    if (type === 'folder' || type === 'cat') await renderCats();
     if (type === 'brand') await renderBrands();
     if (type === 'prod')  await renderProds();
     await renderDash();

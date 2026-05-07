@@ -64,6 +64,7 @@
 
       /* Контейнер-лента */
       #products-container {
+        padding-top: 60px;
         height: 100%;
         overflow-y: scroll;
         scroll-snap-type: y mandatory;
@@ -155,36 +156,38 @@
         .price-item div { font-size: 26px !important; }
       }
 
-      /* Фиксированный логотип снизу справа */
-      .fixed-logo {
+      /* Фиксированный логотип вверху по центру */
+      .main-screen-logo {
         position: fixed;
-        bottom: 20px;
-        right: 10px;
-        z-index: 9999;
+        top: 20%;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 5;
         pointer-events: none;
+        width: 100%;
+        display: flex;
+        justify-content: center;
       }
-      .fixed-logo img {
-        width: 400px;
+      .main-screen-logo img {
+        width: 220px;
         height: auto;
-        opacity: 0.8;
-        filter: drop-shadow(0 2px 10px rgba(0,0,0,0.1));
-        transition: opacity 0.3s ease;
+        filter: drop-shadow(0 2px 8px rgba(0,0,0,0.05));
       }
-      .fixed-logo:hover img {
-        opacity: 1;
-      }
-      @media (max-width: 480px) {
-        .fixed-logo {
-          bottom: 600px;
-          right: 70px;
+      @media (max-width: 400px) {
+        .main-screen-logo {
+          top: 100px;
         }
-        .fixed-logo img {
-          width: 280px;
+        .main-screen-logo img {
+          width: 180px;
         }
       }
     </style>
 </head>
 <body>
+  <!-- Фиксированный логотип вверху -->
+  <div class="main-screen-logo">
+    <img src="https://res.cloudinary.com/dggej5mco/image/upload/v1778144532/WhatsApp_Image_2026-05-07_at_13.01.14-Photoroom_p8pkrc.webp" alt="Сладкий Дом">
+  </div>
   <div class="container">
     <div class="header">
       <div class="logo">🛍 Каталог</div>
@@ -252,7 +255,7 @@
     // Загрузка данных
     async function loadData() {
       try {
-        categories = await API('categories?order=display_order');
+        categories = await API('categories?is_folder=eq.false&order=display_order');
         const prods = await API('products?select=*,categories(name),brands(name)&is_visible=eq.true&order=display_order');
         allProducts = prods;
         renderCategoryFilters();
@@ -295,28 +298,30 @@
       grid.innerHTML = filtered.map(p => {
         const packPrice = (p.price_per_unit || 0) * (p.qty_per_pack || 1);
         const qty = p.qty_per_pack || 1;
-        const badgesHtml = p.labels?.length ? p.labels.map(l => `<span class="badge">${l}</span>`).join('') : '';
+        const badgesHtml = p.labels?.length 
+          ? `<div style="display:flex; gap:5px; margin-bottom:5px;">${p.labels.map(l => `<span class="badge">${l}</span>`).join('')}</div>` 
+          : '';
         return `
           <div class="product-card">
+            ${badgesHtml}
             <img class="product-img" src="${cloudinaryUrl(p.image_public_id)}" alt="${escapeHtml(p.name)}" onclick="openImageModal(this.src)">
             <div class="product-body">
-              <div style="font-size: 14px; color: var(--muted); margin-bottom: 8px;">
-                <span style="color: #d4a017; font-weight: 600;">${p.categories?.name || ''}</span>
-                ${p.categories?.name && p.brands?.name ? ' • ' : ''}
-                <span style="color: #2ecc71; font-weight: 600;">${p.brands?.name || ''}</span>
+              <div style="font-size: 13px; font-weight: 700; text-transform: uppercase; margin-bottom: 6px;">
+                <span style="color: #d4a017;">${p.categories?.name || ''}</span>
+                <span style="color: #ccc; margin: 0 6px;">•</span>
+                <span style="color: #2ecc71;">${p.brands?.name || ''}</span>
               </div>
-              <h2 style="font-size: 24px; margin-bottom: 15px;">${p.name}</h2>
-              <div style="display: flex; justify-content: center; gap: 30px; background: white; padding: 20px; border-radius: 20px;">
+              <h2 style="font-size: 32px; font-weight: 900; line-height: 1; margin-bottom: 12px;">${p.name}</h2>
+              <div style="display: flex; justify-content: center; align-items: flex-end; gap: 30px;">
                 <div class="price-item">
-                  <span style="font-size: 11px; color: var(--muted);">1 ШТУКА</span>
-                  <div style="font-size: 22px; font-weight: 800; color: #0066cc;">${(p.price_per_unit || 0).toLocaleString()} ₸</div>
+                  <span style="font-size: 11px; font-weight: 800; color: #a1a1a6; margin-bottom: 4px; text-transform: uppercase;">1 шт</span>
+                  <div style="font-size: 30px; font-weight: 900; color: #0066cc;">${(p.price_per_unit || 0).toLocaleString()} <span style="font-size:18px; color: #86868b;">₸</span></div>
                 </div>
                 <div class="price-item">
-                  <span style="font-size: 11px; color: var(--muted);">УПАКОВКА (${qty} шт)</span>
-                  <div style="font-size: 22px; font-weight: 800;">${packPrice.toLocaleString()} ₸</div>
+                  <span style="font-size: 11px; font-weight: 800; color: #a1a1a6; margin-bottom: 4px; text-transform: uppercase;">Упаковка (${qty})</span>
+                  <div style="font-size: 30px; font-weight: 900;">${packPrice.toLocaleString()} <span style="font-size:18px; color: #86868b;">₸</span></div>
                 </div>
               </div>
-              ${badgesHtml ? `<div style="margin-top: 15px;">${badgesHtml}</div>` : ''}
             </div>
           </div>`;
       }).join('');
