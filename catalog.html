@@ -64,7 +64,7 @@
 
       /* Контейнер-лента */
       #products-container {
-        padding-top: 60px;
+        padding-top: 0;
         height: 100%;
         overflow-y: scroll;
         scroll-snap-type: y mandatory;
@@ -113,15 +113,28 @@
       /* Метки (badges) */
       .badge {
         display: inline-block;
-        padding: 6px 14px;
+        padding: 5px 13px;
         border-radius: 20px;
         font-size: 11px;
         font-weight: 700;
         text-transform: uppercase;
-        margin: 0 4px;
-        background: #e05252;
         color: #fff;
-        box-shadow: 0 2px 8px rgba(224,82,82,0.3);
+      }
+      .badge-top {
+        background: #e8a020;
+        box-shadow: 0 2px 8px rgba(232,160,32,0.35);
+      }
+      .badge-shock {
+        background: #e05252;
+        box-shadow: 0 2px 8px rgba(224,82,82,0.35);
+      }
+      .badge-new {
+        background: #27ae60;
+        box-shadow: 0 2px 8px rgba(39,174,96,0.35);
+      }
+      .badge-hit {
+        background: #0066cc;
+        box-shadow: 0 2px 8px rgba(0,102,204,0.35);
       }
 
       /* Модальное окно с размытием */
@@ -161,25 +174,19 @@
         position: fixed;
         top: 20%;
         left: 50%;
-        transform: translateX(-50%);
-        z-index: 5;
+        transform: translate(-50%, -50%);
+        z-index: 50;
         pointer-events: none;
         width: 100%;
         display: flex;
         justify-content: center;
+        transition: opacity 0.4s ease;
       }
       .main-screen-logo img {
-        width: 220px;
+        width: min(65vw, 360px);
         height: auto;
+        opacity: 0.48;
         filter: drop-shadow(0 2px 8px rgba(0,0,0,0.05));
-      }
-      @media (max-width: 400px) {
-        .main-screen-logo {
-          top: 100px;
-        }
-        .main-screen-logo img {
-          width: 180px;
-        }
       }
     </style>
 </head>
@@ -209,10 +216,7 @@
     <img id="modal-image" src="" alt="">
   </div>
 
-  <!-- Фиксированный логотип -->
-  <div class="fixed-logo">
-    <img src="https://res.cloudinary.com/dggej5mco/image/upload/v1778144532/WhatsApp_Image_2026-05-07_at_13.01.14-Photoroom_p8pkrc.webp" alt="Logo">
-  </div>
+
 
   <script>
     // ═══════════════ НАСТРОЙКИ ═══════════════
@@ -299,28 +303,47 @@
         const packPrice = (p.price_per_unit || 0) * (p.qty_per_pack || 1);
         const qty = p.qty_per_pack || 1;
         const badgesHtml = p.labels?.length 
-          ? `<div style="display:flex; gap:5px; margin-bottom:5px;">${p.labels.map(l => `<span class="badge">${l}</span>`).join('')}</div>` 
+          ? `<div style="display:flex; gap:5px; margin-bottom:5px;">${p.labels.map(l => `<span class="badge ${l==='Топ'?'badge-top':l==='Шок цена'?'badge-shock':l==='Новинка'?'badge-new':l==='Хит'?'badge-hit':''}">${l}</span>`).join('')}</div>` 
           : '';
         return `
           <div class="product-card">
             ${badgesHtml}
             <img class="product-img" src="${cloudinaryUrl(p.image_public_id)}" alt="${escapeHtml(p.name)}" onclick="openImageModal(this.src)">
             <div class="product-body">
-              <div style="font-size: 13px; font-weight: 700; text-transform: uppercase; margin-bottom: 6px;">
-                <span style="color: #d4a017;">${p.categories?.name || ''}</span>
-                <span style="color: #ccc; margin: 0 6px;">•</span>
-                <span style="color: #2ecc71;">${p.brands?.name || ''}</span>
+              <!-- 1. Название -->
+              <h2 style="font-size:clamp(20px,5vw,30px);font-weight:900;line-height:1.1;margin-bottom:12px">
+                ${escapeHtml(p.name)}
+              </h2>
+
+              <!-- 2. Цены рядом -->
+              <div style="display:flex;justify-content:center;align-items:flex-end;gap:clamp(16px,6vw,36px);margin-bottom:14px">
+                <div class="price-item">
+                  <span style="font-size:11px;font-weight:800;color:#a1a1a6;margin-bottom:3px;text-transform:uppercase">1 шт</span>
+                  <div style="font-size:clamp(22px,5vw,30px);font-weight:900;color:#0066cc">
+                    ${(p.price_per_unit || 0).toLocaleString()}
+                    <span style="font-size:15px;color:#86868b">₸</span>
+                  </div>
+                </div>
+                <div style="width:1px;height:36px;background:rgba(0,0,0,0.1);align-self:center"></div>
+                <div class="price-item">
+                  <span style="font-size:11px;font-weight:800;color:#a1a1a6;margin-bottom:3px;text-transform:uppercase">Упаковка (${qty} шт)</span>
+                  <div style="font-size:clamp(22px,5vw,30px);font-weight:900">
+                    ${packPrice.toLocaleString()}
+                    <span style="font-size:15px;color:#86868b">₸</span>
+                  </div>
+                </div>
               </div>
-              <h2 style="font-size: 32px; font-weight: 900; line-height: 1; margin-bottom: 12px;">${p.name}</h2>
-              <div style="display: flex; justify-content: center; align-items: flex-end; gap: 30px;">
-                <div class="price-item">
-                  <span style="font-size: 11px; font-weight: 800; color: #a1a1a6; margin-bottom: 4px; text-transform: uppercase;">1 шт</span>
-                  <div style="font-size: 30px; font-weight: 900; color: #0066cc;">${(p.price_per_unit || 0).toLocaleString()} <span style="font-size:18px; color: #86868b;">₸</span></div>
-                </div>
-                <div class="price-item">
-                  <span style="font-size: 11px; font-weight: 800; color: #a1a1a6; margin-bottom: 4px; text-transform: uppercase;">Упаковка (${qty})</span>
-                  <div style="font-size: 30px; font-weight: 900;">${packPrice.toLocaleString()} <span style="font-size:18px; color: #86868b;">₸</span></div>
-                </div>
+
+              <!-- 3. Категория слева, ТМ справа -->
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                <span style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#c9920a">
+                  ${p.categories?.name || ''}
+                </span>
+                ${p.brands?.name
+                  ? `<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;background:#e05252;color:#fff;padding:4px 12px;border-radius:6px">
+                      ${p.brands.name}
+                    </span>`
+                  : ''}
               </div>
             </div>
           </div>`;
