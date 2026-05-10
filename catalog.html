@@ -949,14 +949,13 @@ ${catalogUrl}`;
       document.getElementById('order-total').textContent = total.toLocaleString() + ' ₸';
     }
 
-    if (checkOrderPage()) {
-      // показана страница заказа, каталог не грузим
-    } else {
-      // продолжаем — loadData() ниже
-    }
-
     // Инициализация
     loadData();
+
+    // Проверяем ссылку с корзиной после загрузки DOM
+    if (checkOrderPage()) {
+      // показана страница заказа, каталог не грузим
+    }
   </script>
 </body>
 </html>
