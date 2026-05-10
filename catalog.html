@@ -883,15 +883,10 @@
     function shareToWhatsApp() {
       const items = Object.values(cart);
       if (!items.length) return;
-      const cartData = {
-        items: items.map(i => ({ id:i.id, name:i.name, price_per_unit:i.price_per_unit, qty_per_pack:i.qty_per_pack, qty:i.qty, image_public_id:i.image_public_id||'' })),
-        created_at: new Date().toISOString()
-      };
-      const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(cartData))));
-      const baseUrl = window.location.origin + window.location.pathname;
-      const shareUrlWithCart = `${baseUrl}?cart=${encoded}`;
-      const catalogUrl = baseUrl;
       
+      const baseUrl = window.location.origin + window.location.pathname;
+      
+      // Текстовое сообщение БЕЗ зашифрованной ссылки
       const text = `🛒 *Список покупок*
 
 ${items.map(i=>`• ${i.name} — ${i.qty} уп. = ${(i.price_per_unit*i.qty_per_pack*i.qty).toLocaleString()} ₸`).join('\n')}
@@ -900,11 +895,8 @@ ${items.map(i=>`• ${i.name} — ${i.qty} уп. = ${(i.price_per_unit*i.qty_per
 
 ━━━━━━━━━━━━━━━━━━━━
 
-📋 *Список товаров:*
-${shareUrlWithCart}
-
 🔗 *Каталог:*
-${catalogUrl}`;
+${baseUrl}`;
       window.open(`https://wa.me/?text=${encodeURIComponent(text)}`,'_blank');
     }
 
