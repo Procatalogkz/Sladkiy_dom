@@ -247,7 +247,7 @@
 
       /* ── КНОПКА ДОБАВИТЬ В КОРЗИНУ НА КАРТОЧКЕ ── */
       .btn-add-cart {
-        margin-top: 14px;
+        margin: 14px auto 0;
         width: 100%; max-width: 320px;
         padding: 13px 20px;
         border-radius: 14px; border: none;
@@ -803,17 +803,33 @@
       b.classList.toggle('visible', cnt > 0);
     }
 
-    function handleCartBtn(productId) {
-      if (cart[productId]) return;
-      const p = allProducts.find(x => x.id === productId);
-      if (!p) return;
-      cart[productId] = { ...p, qty: 1 };
-      updateCartBadge();
+    function updateCartBtn(productId) {
       const btn = document.querySelector(`.btn-add-cart[data-id="${productId}"]`);
       if (btn) {
-        btn.classList.add('in-cart');
-        btn.textContent = '✓ В корзине';
+        if (cart[productId]) {
+          btn.classList.add('in-cart');
+          btn.textContent = '✓ В корзине';
+        } else {
+          btn.classList.remove('in-cart');
+          btn.textContent = '+ В корзину';
+        }
       }
+    }
+
+    function handleCartBtn(productId) {
+      const p = allProducts.find(x => x.id === productId);
+      if (!p) return;
+      
+      if (cart[productId]) {
+        // Товар уже в корзине — удаляем
+        delete cart[productId];
+      } else {
+        // Добавляем товар в корзину
+        cart[productId] = { ...p, qty: 1 };
+      }
+      
+      updateCartBadge();
+      updateCartBtn(productId);
     }
 
     function changeQty(productId, delta) {
@@ -821,6 +837,7 @@
       cart[productId].qty += delta;
       if (cart[productId].qty <= 0) delete cart[productId];
       updateCartBadge();
+      updateCartBtn(productId);
       if (document.getElementById('cart-panel').classList.contains('open')) renderCartPanel();
     }
 
