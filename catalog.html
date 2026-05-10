@@ -871,20 +871,39 @@
         created_at: new Date().toISOString()
       };
       const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(cartData))));
-      const pageUrl = window.location.href.split('?')[0];
-      const shareUrl = `${pageUrl}?cart=${encoded}`;
-      const text = `🛒 Список покупок:\n\n${items.map(i=>`• ${i.name} — ${i.qty} уп. = ${(i.price_per_unit*i.qty_per_pack*i.qty).toLocaleString()} ₸`).join('\n')}\n\n💰 Итого: ${cartTotal().toLocaleString()} ₸\n\n📋 ${shareUrl}`;
+      const baseUrl = window.location.origin + window.location.pathname;
+      const shareUrlWithCart = `${baseUrl}?cart=${encoded}`;
+      const catalogUrl = baseUrl;
+      
+      const text = `🛒 *Список покупок*
+
+${items.map(i=>`• ${i.name} — ${i.qty} уп. = ${(i.price_per_unit*i.qty_per_pack*i.qty).toLocaleString()} ₸`).join('\n')}
+
+💰 *Итого:* ${cartTotal().toLocaleString()} ₸
+
+━━━━━━━━━━━━━━━━━━━━
+
+📋 *Список товаров:*
+${shareUrlWithCart}
+
+🔗 *Каталог:*
+${catalogUrl}`;
       window.open(`https://wa.me/?text=${encodeURIComponent(text)}`,'_blank');
     }
 
     // ════════ СТРАНИЦА ЗАКАЗА ════════
     function checkOrderPage() {
-      const encoded = new URLSearchParams(window.location.search).get('cart');
+      const params = new URLSearchParams(window.location.search);
+      const encoded = params.get('cart');
       if (!encoded) return false;
       try {
-        showOrderPage(JSON.parse(decodeURIComponent(escape(atob(encoded)))));
+        const data = JSON.parse(decodeURIComponent(escape(atob(encoded))));
+        showOrderPage(data);
         return true;
-      } catch(e) { return false; }
+      } catch(e) {
+        console.error('Ошибка декодирования корзины:', e);
+        return false;
+      }
     }
 
     function showOrderPage(data) {
