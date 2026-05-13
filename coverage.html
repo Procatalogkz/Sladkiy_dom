@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Зоны торговых представителей</title>
+  <style>
+    :root {
+      --bg: #f0f2f5;
+      --white: #ffffff;
+      --accent: #0066cc;
+      --green: #28a745;
+      --red: #dc3545;
+      --orange: #fd7e14;
+      --gray: #6c757d;
+      --border: #dee2e6;
+      --text: #1d1d1f;
+      --muted: #6c757d;
+      --radius: 10px;
+      --shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); }
+
+    /* ── LOGIN ── */
+    #login-screen {
+      position: fixed; inset: 0; background: var(--bg);
+      display: flex; align-items: center; justify-content: center; z-index: 9999;
+    }
+    #login-screen.hidden { display: none; }
+    .login-box {
+      background: var(--white); border-radius: 16px;
+      padding: 40px 36px; width: 100%; max-width: 380px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.12);
+      text-align: center;
+    }
+    .login-box h2 { font-size: 22px; font-weight: 800; margin-bottom: 6px; }
+    .login-box p { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
+    .login-box input {
+      width: 100%; padding: 12px 16px; margin-bottom: 12px;
+      border: 1px solid var(--border); border-radius: var(--radius);
+      font-size: 15px; outline: none; transition: border-color .15s;
+    }
+    .login-box input:focus { border-color: var(--accent); }
+    .login-err { color: var(--red); font-size: 13px; margin-bottom: 10px; display: none; }
+    .login-btn-skip { font-size: 13px; color: var(--muted); margin-top: 14px; cursor: pointer; text-decoration: underline; }
+    .login-btn-skip:hover { color: var(--text); }
+
+    /* ── LAYOUT ── */
+    #app { display: none; flex-direction: row; height: 100vh; }
+    #app.active { display: flex; }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      width: 280px; flex-shrink: 0;
+      background: var(--white); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; height: 100vh; overflow: hidden;
+    }
+    .sb-head {
+      padding: 18px 18px 14px;
+      border-bottom: 1px solid var(--border); flex-shrink: 0;
+    }
+    .sb-title { font-size: 15px; font-weight: 800; margin-bottom: 2px; }
+    .sb-role { font-size: 11px; color: var(--muted); font-weight: 500; }
+
+    .sb-section { padding: 12px 18px 6px; font-size: 10px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: .07em; }
+
+    /* Фильтр ТП */
+    .rep-filter { padding: 0 12px 8px; display: flex; flex-direction: column; gap: 4px; overflow-y: auto; flex: 1; }
+    .rep-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 10px; border-radius: 8px; cursor: pointer;
+      transition: background .15s; border: 2px solid transparent;
+    }
+    .rep-item:hover { background: #f5f5f7; }
+    .rep-item.active { background: rgba(0,102,204,0.07); border-color: rgba(0,102,204,0.2); }
+    .rep-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; border: 2px solid rgba(0,0,0,0.15); }
+    .rep-name { font-size: 13px; font-weight: 500; flex: 1; }
+    .rep-count { font-size: 11px; color: var(--muted); }
+    .rep-all { font-size: 13px; font-weight: 600; }
+
+    /* Список зон */
+    .zone-list { padding: 0 12px 12px; display: flex; flex-direction: column; gap: 3px; overflow-y: auto; max-height: 200px; }
+    .zone-list-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 10px; border-radius: 7px; cursor: pointer;
+      transition: background .15s; font-size: 12px;
+    }
+    .zone-list-item:hover { background: #f5f5f7; }
+    .zone-list-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+    .zone-list-name { flex: 1; font-weight: 500; }
+    .zone-list-rep { color: var(--muted); }
+
+    .sb-footer { padding: 12px 14px; border-top: 1px solid var(--border); flex-shrink: 0; }
+
+    /* ── КАРТА ── */
+    .map-wrap { flex: 1; display: flex; flex-direction: column; position: relative; }
+    #map { flex: 1; }
+
+    /* ── ТУЛБАР КАРТЫ ── */
+    .map-toolbar {
+      position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+      z-index: 100; display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;
+    }
+
+    /* ── КНОПКИ ── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 9px 18px; border-radius: 8px; border: none;
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      transition: all .15s; white-space: nowrap;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    }
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,0,0,0.18); }
+    .btn:active { transform: scale(.97); }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-success { background: var(--green); color: #fff; }
+    .btn-danger  { background: var(--red); color: #fff; }
+    .btn-orange  { background: var(--orange); color: #fff; }
+    .btn-gray    { background: var(--gray); color: #fff; }
+    .btn-sm { padding: 6px 12px; font-size: 12px; }
+    .btn-full { width: 100%; justify-content: center; }
+
+    /* ── МОДАЛКИ ── */
+    .overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.55); z-index: 8000;
+      align-items: center; justify-content: center;
+      backdrop-filter: blur(4px);
+    }
+    .overlay.open { display: flex; }
+    .modal-box {
+      background: var(--white); border-radius: 16px;
+      padding: 28px 26px; width: 90%; max-width: 420px;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+    }
+    .modal-title { font-size: 16px; font-weight: 800; margin-bottom: 18px; }
+    .fg { margin-bottom: 14px; }
+    .fg label { display: block; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; }
+    .fg input, .fg select { width: 100%; padding: 10px 13px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; outline: none; transition: border-color .15s; }
+    .fg input:focus, .fg select:focus { border-color: var(--accent); }
+    .fg input[type=color] { height: 44px; padding: 4px 8px; cursor: pointer; }
+    .modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+
+    /* ── УВЕДОМЛЕНИЯ ── */
+    .notif-wrap { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+    .notif {
+      background: var(--green); color: #fff;
+      padding: 11px 22px; border-radius: 10px;
+      font-size: 14px; font-weight: 600;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+      animation: nIn .25s ease; white-space: nowrap;
+    }
+    .notif.error { background: var(--red); }
+    @keyframes nIn { from { opacity:0; transform: translateY(12px); } to { opacity:1; transform: translateY(0); } }
+
+    /* ── ПУСТОЙ СПИСОК ── */
+    .empty-list { padding: 16px 18px; font-size: 12px; color: var(--muted); font-style: italic; }
+
+    /* ── СТАТУС РИСОВАНИЯ ── */
+    .draw-status {
+      position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+      z-index: 100; background: rgba(0,0,0,0.75); color: #fff;
+      padding: 10px 20px; border-radius: 10px; font-size: 13px; font-weight: 600;
+      display: none; white-space: nowrap; backdrop-filter: blur(6px);
+    }
+    .draw-status.visible { display: block; }
+
+    @media (max-width: 640px) {
+      .sidebar { width: 100%; height: auto; max-height: 40vh; }
+      #app { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══ ЭКРАН ВХОДА ══ -->
+<div id="login-screen">
+  <div class="login-box">
+    <h2>🗺 Зоны ТП</h2>
+    <p>Войдите как администратор или просматривайте без входа</p>
+    <div class="login-err" id="login-err">Неверный логин или пароль</div>
+    <input type="text" id="login-user" placeholder="Логин">
+    <input type="password" id="login-pass" placeholder="Пароль" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="btn btn-primary btn-full" onclick="doLogin()">Войти как администратор</button>
+    <div class="login-btn-skip" onclick="enterAsViewer()">Просматривать без входа →</div>
+  </div>
+</div>
+
+<!-- ══ ПРИЛОЖЕНИЕ ══ -->
+<div id="app">
+
+  <!-- САЙДБАР -->
+  <aside class="sidebar">
+    <div class="sb-head">
+      <div class="sb-title">Зоны торговых представителей</div>
+      <div class="sb-role" id="sb-role">👁 Просмотр</div>
+    </div>
+
+    <div class="sb-section">Фильтр по ТП</div>
+    <div class="rep-filter" id="rep-filter"></div>
+
+    <div class="sb-section">Зоны на карте</div>
+    <div class="zone-list" id="zone-list"></div>
+
+    <div class="sb-footer" id="sb-footer"></div>
+  </aside>
+
+  <!-- КАРТА -->
+  <div class="map-wrap">
+    <div id="map"></div>
+
+    <!-- Тулбар администратора -->
+    <div class="map-toolbar" id="admin-toolbar" style="display:none">
+      <button class="btn btn-primary" id="draw-btn" onclick="startDrawing()">✏️ Рисовать зону</button>
+      <button class="btn btn-gray" onclick="openRepModal()">👤 + Добавить ТП</button>
+      <button class="btn btn-danger btn-sm" onclick="clearAllZones()">🗑 Очистить всё</button>
+    </div>
+
+    <div class="draw-status" id="draw-status">
+      Кликайте по карте — рисуйте зону. Двойной клик — завершить.
+    </div>
+  </div>
+</div>
+
+<!-- ══ МОДАЛКА: НОВАЯ ЗОНА ══ -->
+<div class="overlay" id="modal-zone">
+  <div class="modal-box">
+    <div class="modal-title">Новая зона</div>
+    <div class="fg">
+      <label>Название зоны *</label>
+      <input type="text" id="zone-name" placeholder="Например: Бостандыкский р-н">
+    </div>
+    <div class="fg">
+      <label>Торговый представитель *</label>
+      <select id="zone-rep-sel"></select>
+    </div>
+    <div class="fg">
+      <label>Цвет зоны</label>
+      <input type="color" id="zone-color" value="#0066cc">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-gray" onclick="cancelZone()">Отмена</button>
+      <button class="btn btn-success" onclick="saveZone()">💾 Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ МОДАЛКА: НОВЫЙ ТП ══ -->
+<div class="overlay" id="modal-rep">
+  <div class="modal-box">
+    <div class="modal-title">Добавить торгового представителя</div>
+    <div class="fg">
+      <label>Имя / Фамилия *</label>
+      <input type="text" id="rep-name" placeholder="Например: Иван Петров">
+    </div>
+    <div class="fg">
+      <label>Цвет на карте</label>
+      <input type="color" id="rep-color" value="#e8a020">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-gray" onclick="closeModal('modal-rep')">Отмена</button>
+      <button class="btn btn-success" onclick="saveRep()">Добавить</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ УВЕДОМЛЕНИЯ ══ -->
+<div class="notif-wrap" id="notif-wrap"></div>
+
+<!-- Яндекс.Карты -->
+<script src="https://api-maps.yandex.ru/2.1/?apikey=9108ed42-562d-45d2-a4e2-d941952baa06&lang=ru_RU"></script>
+<script>
+// ════════════════════════════════════════
+// НАСТРОЙКИ
+// ════════════════════════════════════════
+const SUPABASE_URL = 'https://xvekrzgaavlozgghojwh.supabase.co';    // ← вставить позже
+const SUPABASE_KEY = 'sb_publishable_HqcMl3tsypuWQyh_RvIpVw_ZFU6khbB'; // ← вставить позже
+
+const ADMIN_LOGIN = 'Sd1';
+const ADMIN_PASS  = 'Sd123123';
+
+// ════════════════════════════════════════
+// API HELPER
+// ════════════════════════════════════════
+const API = (endpoint, options = {}) => {
+  const url = `${SUPABASE_URL}/rest/v1/${endpoint}`;
+  const headers = {
+    'apikey': SUPABASE_KEY,
+    'Authorization': `Bearer ${SUPABASE_KEY}`,
+    'Content-Type': 'application/json',
+    'Prefer': 'return=representation',
+    ...(options.headers || {})
+  };
+  return fetch(url, { ...options, headers }).then(async res => {
+    if (!res.ok) throw new Error(`Supabase ${res.status}: ${await res.text()}`);
+    if (res.status === 204) return null;
+    return res.json();
+  });
+};
+
+// ════════════════════════════════════════
+// СОСТОЯНИЕ
+// ════════════════════════════════════════
+let isAdmin      = false;
+let myMap        = null;
+let isDrawing    = false;
+let currentPoly  = null;
+let activeRepId  = 'all';
+
+let reps  = [];
+let zones = [];
+
+// Объекты на карте: { zoneId: { polygon, label } }
+const mapObjects = {};
+
+// ════════════════════════════════════════
+// АВТОРИЗАЦИЯ
+// ════════════════════════════════════════
+function doLogin() {
+  const user = document.getElementById('login-user').value.trim();
+  const pass = document.getElementById('login-pass').value;
+  const err  = document.getElementById('login-err');
+
+  if (user === ADMIN_LOGIN && pass === ADMIN_PASS) {
+    isAdmin = true;
+    err.style.display = 'none';
+    startApp();
+  } else {
+    err.style.display = 'block';
+  }
+}
+
+function enterAsViewer() {
+  isAdmin = false;
+  startApp();
+}
+
+function startApp() {
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('app').classList.add('active');
+  document.getElementById('sb-role').textContent = isAdmin ? '🔑 Администратор' : '👁 Просмотр';
+  if (isAdmin) {
+    document.getElementById('admin-toolbar').style.display = 'flex';
+    renderSbFooter();
+  }
+  ymaps.ready(initMap);
+}
+
+// ════════════════════════════════════════
+// ИНИЦИАЛИЗАЦИЯ КАРТЫ
+// ════════════════════════════════════════
+async function initMap() {
+  myMap = new ymaps.Map('map', {
+    center: [43.2389, 76.8897],
+    zoom: 11,
+    controls: ['zoomControl', 'fullscreenControl', 'geolocationControl']
+  });
+
+  // Загружаем данные из Supabase
+  await loadData();
+  renderSidebar();
+  renderAllZones();
+}
+
+async function loadData() {
+  try {
+    const [repsData, zonesData] = await Promise.all([
+      API('reps?order=created_at'),
+      API('zones?order=created_at')
+    ]);
+    reps  = repsData  || [];
+    zones = zonesData || [];
+  } catch(e) {
+    notify('Ошибка загрузки данных: ' + e.message, 'error');
+    console.error(e);
+  }
+}
+
+// ════════════════════════════════════════
+// САЙДБАР
+// ════════════════════════════════════════
+function renderSidebar() {
+  renderRepFilter();
+  renderZoneList();
+  if (isAdmin) renderSbFooter();
+}
+
+function renderRepFilter() {
+  const el = document.getElementById('rep-filter');
+  const counts = {};
+  zones.forEach(z => { counts[z.rep_id] = (counts[z.rep_id]||0) + 1; });
+
+  el.innerHTML = `
+    <div class="rep-item ${activeRepId==='all'?'active':''}" onclick="setRepFilter('all')">
+      <div class="rep-dot" style="background:#888"></div>
+      <span class="rep-all">Все ТП</span>
+      <span class="rep-count">${zones.length} зон</span>
+    </div>` +
+    (reps.length
+      ? reps.map(r => `
+        <div class="rep-item ${activeRepId===r.id?'active':''}" onclick="setRepFilter('${r.id}')">
+          <div class="rep-dot" style="background:${r.color}"></div>
+          <span class="rep-name">${r.name}</span>
+          <span class="rep-count">${counts[r.id]||0}</span>
+          ${isAdmin ? `<button style="border:none;background:none;cursor:pointer;color:#ccc;font-size:14px" onclick="event.stopPropagation();deleteRep('${r.id}')" title="Удалить">✕</button>` : ''}
+        </div>`).join('')
+      : '<div class="empty-list">Нет торговых представителей</div>');
+}
+
+function renderZoneList() {
+  const el = document.getElementById('zone-list');
+  const filtered = activeRepId === 'all' ? zones : zones.filter(z => z.rep_id === activeRepId);
+  if (!filtered.length) { el.innerHTML = '<div class="empty-list">Нет зон</div>'; return; }
+  el.innerHTML = filtered.map(z => {
+    const rep = reps.find(r => r.id === z.rep_id);
+    return `<div class="zone-list-item" onclick="focusZone('${z.id}')">
+      <div class="zone-list-dot" style="background:${z.color}"></div>
+      <span class="zone-list-name">${z.name}</span>
+      <span class="zone-list-rep">${rep?.name||'—'}</span>
+      ${isAdmin ? `<button style="border:none;background:none;cursor:pointer;color:#ccc;font-size:13px" onclick="event.stopPropagation();deleteZone('${z.id}')" title="Удалить">✕</button>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function renderSbFooter() {
+  document.getElementById('sb-footer').innerHTML = `
+    <button class="btn btn-gray btn-sm btn-full" onclick="exportData()">📤 Экспорт JSON</button>
+    <div style="margin-top:6px">
+      <label class="btn btn-sm btn-full" style="background:#6610f2;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">
+        📥 Импорт JSON
+        <input type="file" accept=".json" style="display:none" onchange="importData(event)">
+      </label>
+    </div>`;
+}
+
+function setRepFilter(repId) {
+  activeRepId = repId;
+  renderSidebar();
+  renderAllZones();
+}
+
+// ════════════════════════════════════════
+// РИСОВАНИЕ ЗОНЫ
+// ════════════════════════════════════════
+function startDrawing() {
+  if (!isAdmin || isDrawing) return;
+  if (!reps.length) { notify('Сначала добавьте торгового представителя', 'error'); return; }
+
+  isDrawing = true;
+  const btn = document.getElementById('draw-btn');
+  btn.textContent = '⏹ Остановить';
+  btn.classList.replace('btn-primary','btn-orange');
+  document.getElementById('draw-status').classList.add('visible');
+
+  currentPoly = new ymaps.Polygon([[]], {}, {
+    fillColor: '#0066cc44',
+    fillOpacity: 0.4,
+    strokeColor: '#0066cc',
+    strokeWidth: 3,
+    editorDrawingCursor: 'crosshair'
+  });
+  myMap.geoObjects.add(currentPoly);
+  currentPoly.editor.startDrawing();
+
+  // Двойной клик — завершить
+  const onDbl = () => {
+    myMap.events.remove('dblclick', onDbl);
+    finishDrawing();
+  };
+  myMap.events.add('dblclick', onDbl);
+
+  // Переключатель кнопки — стоп
+  btn.onclick = () => {
+    myMap.events.remove('dblclick', onDbl);
+    finishDrawing();
+  };
+}
+
+function finishDrawing() {
+  if (!currentPoly) return;
+  currentPoly.editor.stopDrawing();
+
+  const coords = currentPoly.geometry.getCoordinates()[0];
+  if (!coords || coords.length < 3) {
+    myMap.geoObjects.remove(currentPoly);
+    currentPoly = null;
+    resetDrawBtn();
+    notify('Минимум 3 точки для зоны', 'error');
+    return;
+  }
+  resetDrawBtn();
+  openZoneModal();
+}
+
+function resetDrawBtn() {
+  isDrawing = false;
+  const btn = document.getElementById('draw-btn');
+  btn.textContent = '✏️ Рисовать зону';
+  btn.classList.replace('btn-orange','btn-primary');
+  btn.onclick = startDrawing;
+  document.getElementById('draw-status').classList.remove('visible');
+}
+
+function cancelZone() {
+  if (currentPoly) { myMap.geoObjects.remove(currentPoly); currentPoly = null; }
+  closeModal('modal-zone');
+}
+
+// ════════════════════════════════════════
+// СОХРАНЕНИЕ ЗОНЫ
+// ════════════════════════════════════════
+function openZoneModal() {
+  // Заполняем селект ТП
+  const sel = document.getElementById('zone-rep-sel');
+  sel.innerHTML = reps.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
+  if (activeRepId !== 'all') sel.value = activeRepId;
+  document.getElementById('zone-name').value = '';
+  openModal('modal-zone');
+  setTimeout(() => document.getElementById('zone-name').focus(), 80);
+}
+
+async function saveZone() {
+  const name   = document.getElementById('zone-name').value.trim();
+  const repId  = document.getElementById('zone-rep-sel').value;
+  const color  = document.getElementById('zone-color').value;
+  if (!name)  { notify('Введите название зоны', 'error'); return; }
+  if (!repId) { notify('Выберите торгового представителя', 'error'); return; }
+
+  const coords = currentPoly.geometry.getCoordinates()[0];
+  const center = polygonCenter(coords);
+  const rep    = reps.find(r => r.id === repId);
+  const zoneColor = rep?.color || color;
+
+  // Удаляем временный полигон
+  myMap.geoObjects.remove(currentPoly);
+  currentPoly = null;
+  closeModal('modal-zone');
+
+  const btn = document.querySelector('#modal-zone .btn-success');
+
+  try {
+    notify('Сохраняю зону...', 'success');
+    const saved = await API('zones', {
+      method: 'POST',
+      body: JSON.stringify({
+        id: uid(),
+        name,
+        rep_id: repId,
+        color: zoneColor,
+        coords: JSON.stringify(coords),
+        center: JSON.stringify(center)
+      })
+    });
+    const zone = saved[0];
+    // coords и center приходят как строки — парсим
+    zone.coords = typeof zone.coords === 'string' ? JSON.parse(zone.coords) : zone.coords;
+    zone.center = typeof zone.center === 'string' ? JSON.parse(zone.center) : zone.center;
+    zones.push(zone);
+    addZoneToMap(zone);
+    renderSidebar();
+    notify('Зона «' + name + '» сохранена');
+  } catch(e) {
+    notify('Ошибка сохранения зоны: ' + e.message, 'error');
+    console.error(e);
+  }
+}
+
+// ════════════════════════════════════════
+// ОТРИСОВКА ЗОН НА КАРТЕ
+// ════════════════════════════════════════
+function renderAllZones() {
+  // Убираем все с карты
+  Object.values(mapObjects).forEach(o => {
+    myMap.geoObjects.remove(o.polygon);
+    myMap.geoObjects.remove(o.label);
+  });
+  Object.keys(mapObjects).forEach(k => delete mapObjects[k]);
+
+  // Парсим coords/center если пришли как строки из Supabase
+  const parsed = zones.map(z => ({
+    ...z,
+    coords: typeof z.coords === 'string' ? JSON.parse(z.coords) : z.coords,
+    center: typeof z.center === 'string' ? JSON.parse(z.center) : z.center,
+  }));
+
+  // Рисуем по фильтру
+  const filtered = activeRepId === 'all' ? parsed : parsed.filter(z => z.rep_id === activeRepId);
+  filtered.forEach(addZoneToMap);
+}
+
+function addZoneToMap(zone) {
+  const rep = reps.find(r => r.id === zone.rep_id);
+  const color = zone.color || rep?.color || '#0066cc';
+
+  const polygon = new ymaps.Polygon(
+    [zone.coords],
+    { hintContent: `${zone.name} — ${rep?.name||''}` },
+    {
+      fillColor: color + '44',
+      fillOpacity: 0.45,
+      strokeColor: color,
+      strokeWidth: 3,
+    }
+  );
+
+  // Подпись прямо на карте
+  const label = new ymaps.Placemark(zone.center, {
+    iconContent: `<b style="font-size:12px;white-space:nowrap">${zone.name}</b>`,
+  }, {
+    preset: 'islands#blueStretchyIcon',
+    iconColor: color,
+  });
+
+  myMap.geoObjects.add(polygon);
+  myMap.geoObjects.add(label);
+  mapObjects[zone.id] = { polygon, label };
+}
+
+function focusZone(zoneId) {
+  const zone = zones.find(z => z.id === zoneId);
+  if (!zone) return;
+  myMap.setCenter(zone.center, 13, { duration: 400 });
+}
+
+// ════════════════════════════════════════
+// УДАЛЕНИЕ
+// ════════════════════════════════════════
+async function deleteZone(id) {
+  if (!confirm('Удалить зону?')) return;
+  try {
+    await API(`zones?id=eq.${id}`, { method: 'DELETE' });
+    zones = zones.filter(z => z.id !== id);
+    if (mapObjects[id]) {
+      myMap.geoObjects.remove(mapObjects[id].polygon);
+      myMap.geoObjects.remove(mapObjects[id].label);
+      delete mapObjects[id];
+    }
+    renderSidebar();
+    notify('Зона удалена');
+  } catch(e) {
+    notify('Ошибка удаления: ' + e.message, 'error');
+  }
+}
+
+async function deleteRep(id) {
+  const hasZones = zones.some(z => z.rep_id === id);
+  const msg = hasZones
+    ? 'У этого ТП есть зоны — они тоже удалятся (каскадно). Продолжить?'
+    : 'Удалить торгового представителя?';
+  if (!confirm(msg)) return;
+  try {
+    // Зоны удалятся каскадно через ON DELETE CASCADE в Supabase
+    await API(`reps?id=eq.${id}`, { method: 'DELETE' });
+    // Убираем с карты
+    zones.filter(z => z.rep_id === id).forEach(z => {
+      if (mapObjects[z.id]) {
+        myMap.geoObjects.remove(mapObjects[z.id].polygon);
+        myMap.geoObjects.remove(mapObjects[z.id].label);
+        delete mapObjects[z.id];
+      }
+    });
+    zones = zones.filter(z => z.rep_id !== id);
+    reps  = reps.filter(r => r.id !== id);
+    if (activeRepId === id) activeRepId = 'all';
+    renderSidebar();
+    notify('Торговый представитель удалён');
+  } catch(e) {
+    notify('Ошибка удаления: ' + e.message, 'error');
+  }
+}
+
+async function clearAllZones() {
+  if (!confirm('Удалить ВСЕ зоны? Это нельзя отменить.')) return;
+  try {
+    await API('zones?id=neq.null', { method: 'DELETE' });
+    Object.values(mapObjects).forEach(o => {
+      myMap.geoObjects.remove(o.polygon);
+      myMap.geoObjects.remove(o.label);
+    });
+    Object.keys(mapObjects).forEach(k => delete mapObjects[k]);
+    zones = [];
+    renderSidebar();
+    notify('Все зоны удалены');
+  } catch(e) {
+    notify('Ошибка: ' + e.message, 'error');
+  }
+}
+
+// ════════════════════════════════════════
+// ТОРГОВЫЕ ПРЕДСТАВИТЕЛИ
+// ════════════════════════════════════════
+function openRepModal() {
+  document.getElementById('rep-name').value = '';
+  openModal('modal-rep');
+  setTimeout(() => document.getElementById('rep-name').focus(), 80);
+}
+
+async function saveRep() {
+  const name  = document.getElementById('rep-name').value.trim();
+  const color = document.getElementById('rep-color').value;
+  if (!name) { notify('Введите имя', 'error'); return; }
+  try {
+    const saved = await API('reps', {
+      method: 'POST',
+      body: JSON.stringify({ id: uid(), name, color })
+    });
+    reps.push(saved[0]);
+    closeModal('modal-rep');
+    renderSidebar();
+    notify('Торговый представитель добавлен');
+  } catch(e) {
+    notify('Ошибка: ' + e.message, 'error');
+  }
+}
+
+// ════════════════════════════════════════
+// ЭКСПОРТ / ИМПОРТ
+// ════════════════════════════════════════
+function exportData() {
+  const data = JSON.stringify({ reps, zones }, null, 2);
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([data], { type: 'application/json' }));
+  a.download = `zones-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  notify('Данные экспортированы');
+}
+
+async function importData(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async ev => {
+    try {
+      const d = JSON.parse(ev.target.result);
+      if (!d.reps || !d.zones) throw new Error('Неверный формат');
+      if (!confirm(`Импортировать ${d.reps.length} ТП и ${d.zones.length} зон? Текущие будут заменены.`)) return;
+
+      notify('Импортирую...', 'success');
+
+      // Очищаем
+      await API('zones?id=neq.null', { method: 'DELETE' });
+      await API('reps?id=neq.null',  { method: 'DELETE' });
+
+      // Загружаем ТП
+      for (const r of d.reps) {
+        await API('reps', { method: 'POST', body: JSON.stringify(r) });
+      }
+      // Загружаем зоны
+      for (const z of d.zones) {
+        await API('zones', { method: 'POST', body: JSON.stringify({
+          ...z,
+          coords: JSON.stringify(z.coords),
+          center: JSON.stringify(z.center)
+        }) });
+      }
+
+      await loadData();
+      // Парсим coords/center
+      zones = zones.map(z => ({
+        ...z,
+        coords: typeof z.coords === 'string' ? JSON.parse(z.coords) : z.coords,
+        center: typeof z.center === 'string' ? JSON.parse(z.center) : z.center,
+      }));
+
+      Object.values(mapObjects).forEach(o => {
+        myMap.geoObjects.remove(o.polygon);
+        myMap.geoObjects.remove(o.label);
+      });
+      Object.keys(mapObjects).forEach(k => delete mapObjects[k]);
+
+      renderSidebar();
+      renderAllZones();
+      notify('Данные импортированы');
+    } catch(err) {
+      notify('Ошибка импорта: ' + err.message, 'error');
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+// saveLocal больше не нужен — данные в Supabase
+function saveLocal() { /* данные хранятся в Supabase */ }
+
+function polygonCenter(coords) {
+  let x = 0, y = 0;
+  coords.forEach(p => { x += p[0]; y += p[1]; });
+  return [x / coords.length, y / coords.length];
+}
+
+function uid() { return Math.random().toString(36).slice(2,10); }
+
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeModal('modal-zone');
+    closeModal('modal-rep');
+  }
+});
+
+function notify(msg, type = 'success') {
+  const wrap = document.getElementById('notif-wrap');
+  const el   = document.createElement('div');
+  el.className = 'notif' + (type === 'error' ? ' error' : '');
+  el.textContent = msg;
+  wrap.appendChild(el);
+  setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .3s'; setTimeout(() => el.remove(), 300); }, 3000);
+}
+</script>
+</body>
+</html>
