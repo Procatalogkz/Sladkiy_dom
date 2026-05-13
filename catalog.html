@@ -631,19 +631,20 @@
     // Состояние
     let allProducts = [];
     let categories = [];
+    let folders = []; // папки
     let activeCategory = 'all';
 
     // Загрузка данных
     async function loadData() {
       try {
-        // Загружаем папки отдельно чтобы знать их display_order
-        const folders = await API('categories?is_folder=eq.true&select=id,display_order');
+        // Загружаем папки
+        folders = await API('categories?is_folder=eq.true&select=id,name,display_order&order=display_order');
+        // Загружаем категории
+        categories = await API('categories?is_folder=eq.false&select=id,name,parent_id,display_order&order=display_order');
+        
         // Карта: folder_id → display_order
         const folderOrderMap = {};
         folders.forEach(f => { folderOrderMap[f.id] = f.display_order; });
-
-        // Категории — только настоящие (не папки)
-        categories = await API('categories?is_folder=eq.false&select=*&order=display_order');
 
         // Карта: category_id → { cat_order, folder_order }
         const catOrderMap = {};
@@ -680,21 +681,53 @@
 
     function renderCategoryFilters() {
       const list = document.getElementById('cat-menu-list');
-      const counts = {};
+      
+      // Считаем товары по категориям
+      const catCounts = {};
       allProducts.forEach(p => {
-        if (p.category_id) counts[p.category_id] = (counts[p.category_id] || 0) + 1;
+        if (p.category_id) catCounts[p.category_id] = (catCounts[p.category_id] || 0) + 1;
       });
-      list.innerHTML =
-        `<div class="cat-menu-all ${activeCategory==='all'?'active':''}" onclick="selectCat('all')">
-          🛍 Все товары
-        </div>
-        <div class="cat-divider"></div>` +
-        categories.map(c =>
-          `<div class="cat-menu-item ${activeCategory===c.id?'active':''}" onclick="selectCat('${c.id}')">
-            <span>${c.name}</span>
-            <span class="cat-count">${counts[c.id]||0}</span>
-          </div>`
-        ).join('');
+
+      // Категории сгруппированные по папкам
+      const catChildren = categories.filter(c => c.parent_id !== null);
+
+      let html = `<div class="cat-menu-all ${activeCategory==='all'?'active':''}" onclick="selectCat('all')">
+        🛍 Все товары
+      </div>
+      <div class="cat-divider"></div>`;
+
+      // Рендерим папки с категориями внутри (в порядке display_order)
+      folders.forEach(folder => {
+        const kids = catChildren.filter(c => c.parent_id === folder.id).sort((a,b)=>a.display_order-b.display_order);
+        const totalProds = kids.reduce((sum, c) => sum + (catCounts[c.id]||0), 0);
+        
+        // Название папки
+        html += `<div class="cat-menu-item ${activeCategory===('folder_'+folder.id)?'active':''}" onclick="selectCat('folder_${folder.id}')">
+          <span>📁 ${folder.name}</span>
+          <span class="cat-count">${totalProds}</span>
+        </div>`;
+        
+        // Категории внутри папки
+        kids.forEach(cat => {
+          html += `<div class="cat-menu-item ${activeCategory===cat.id?'active':''}" onclick="selectCat('${cat.id}')" style="padding-left:28px">
+            <span>• ${cat.name}</span>
+            <span class="cat-count">${catCounts[cat.id]||0}</span>
+          </div>`;
+        });
+      });
+
+      // Сироты (категории без папки)
+      const folderIds = folders.map(f => f.id);
+      const orphans = catChildren.filter(c => !folderIds.includes(c.parent_id));
+      orphans.sort((a,b)=>a.display_order-b.display_order);
+      orphans.forEach(cat => {
+        html += `<div class="cat-menu-item ${activeCategory===cat.id?'active':''}" onclick="selectCat('${cat.id}')">
+          <span>${cat.name}</span>
+          <span class="cat-count">${catCounts[cat.id]||0}</span>
+        </div>`;
+      });
+
+      list.innerHTML = html;
     }
 
     window.setActiveCategory = function(catId) {
@@ -712,7 +745,21 @@
     window.renderProducts = function() {
       const searchText = document.getElementById('search').value.toLowerCase();
       let filtered = allProducts;
-      if (activeCategory !== 'all') filtered = filtered.filter(p => p.category_id === activeCategory);
+
+      if (activeCategory !== 'all') {
+        if (activeCategory.startsWith('folder_')) {
+          // Фильтр по папке — все товары из всех категорий этой папки
+          const folderId = activeCategory.replace('folder_', '');
+          filtered = filtered.filter(p => {
+            const cat = categories.find(c => c.id === p.category_id);
+            return cat && cat.parent_id === folderId;
+          });
+        } else {
+          // Фильтр по конкретной категории
+          filtered = filtered.filter(p => p.category_id === activeCategory);
+        }
+      }
+
       if (searchText) filtered = filtered.filter(p => p.name.toLowerCase().includes(searchText));
 
       // Трёхуровневая сортировка: папка → категория → товар
