@@ -636,8 +636,40 @@
     // Загрузка данных
     async function loadData() {
       try {
-        categories = await API('categories?is_folder=eq.false&select=*,parent:categories!parent_id(display_order)&order=display_order');
-        const prods = await API('products?select=*,categories(name,display_order,parent:categories!parent_id(display_order)),brands(name)&is_visible=eq.true&order=display_order');
+        // Загружаем папки отдельно чтобы знать их display_order
+        const folders = await API('categories?is_folder=eq.true&select=id,display_order');
+        // Карта: folder_id → display_order
+        const folderOrderMap = {};
+        folders.forEach(f => { folderOrderMap[f.id] = f.display_order; });
+
+        // Категории — только настоящие (не папки)
+        categories = await API('categories?is_folder=eq.false&select=*&order=display_order');
+
+        // Карта: category_id → { cat_order, folder_order }
+        const catOrderMap = {};
+        categories.forEach(c => {
+          catOrderMap[c.id] = {
+            cat_order:    c.display_order    ?? 999,
+            folder_order: folderOrderMap[c.parent_id] ?? 999
+          };
+        });
+
+        // Товары
+        const prods = await API('products?select=*,categories(name),brands(name)&is_visible=eq.true');
+
+        // Прикрепляем порядок к каждому товару и сортируем
+        prods.forEach(p => {
+          const cm = catOrderMap[p.category_id] || { cat_order: 999, folder_order: 999 };
+          p._folder_order = cm.folder_order;
+          p._cat_order    = cm.cat_order;
+        });
+
+        prods.sort((a, b) => {
+          if (a._folder_order !== b._folder_order) return a._folder_order - b._folder_order;
+          if (a._cat_order    !== b._cat_order)    return a._cat_order    - b._cat_order;
+          return (a.display_order ?? 999) - (b.display_order ?? 999);
+        });
+
         allProducts = prods;
         renderCategoryFilters();
         renderProducts();
@@ -686,12 +718,12 @@
       // Трёхуровневая сортировка: папка → категория → товар
       filtered.sort((a, b) => {
         // 1. Позиция папки
-        const folderA = a.categories?.parent?.display_order ?? 999;
-        const folderB = b.categories?.parent?.display_order ?? 999;
+        const folderA = a._folder_order ?? 999;
+        const folderB = b._folder_order ?? 999;
         if (folderA !== folderB) return folderA - folderB;
         // 2. Позиция категории внутри папки
-        const catA = a.categories?.display_order ?? 999;
-        const catB = b.categories?.display_order ?? 999;
+        const catA = a._cat_order ?? 999;
+        const catB = b._cat_order ?? 999;
         if (catA !== catB) return catA - catB;
         // 3. Позиция товара внутри категории
         return (a.display_order ?? 999) - (b.display_order ?? 999);
@@ -965,3 +997,8 @@ ${baseUrl}`;
   </script>
 </body>
 </html>
+filtered.sort((a, b) => {
+  if (a._folder_order !== b._folder_order) return a._folder_order - b._folder_order;
+  if (a._cat_order !== b._cat_order) return a._cat_order - b._cat_order;
+  return (a.display_order ?? 999) - (b.display_order ?? 999);
+});
