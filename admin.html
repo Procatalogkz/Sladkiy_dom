@@ -616,7 +616,7 @@ const API = (endpoint, options = {}) => {
       <div class="fg" style="max-width:200px">
         <label>Порядковый номер</label>
         <input type="number" id="folder-order" placeholder="1" min="1">
-        <div class="hint">Меньше число — выше в списке</div>
+        <div class="hint">Порядок блока на витрине. Папка 1 → её товары идут первыми.</div>
       </div>
     </div>
     <div class="modal-footer">
@@ -644,7 +644,7 @@ const API = (endpoint, options = {}) => {
       <div class="fg" style="max-width:200px">
         <label>Порядковый номер</label>
         <input type="number" id="cat-order" placeholder="1" min="1">
-        <div class="hint">Меньше число — выше на витрине</div>
+        <div class="hint">Порядок внутри папки. Категория 1 → её товары идут раньше категории 2.</div>
       </div>
     </div>
     <div class="modal-footer">
@@ -687,7 +687,7 @@ const API = (endpoint, options = {}) => {
       <div class="frow">
         <div class="fg">
           <label>Категория</label>
-          <select id="prod-cat"><option value="">— выберите —</option></select>
+          <select id="prod-cat" onchange="recalcProdOrder()"><option value="">— выберите —</option></select>
         </div>
         <div class="fg">
           <label>Бренд / ТМ</label>
@@ -712,7 +712,7 @@ const API = (endpoint, options = {}) => {
       <div class="fg" style="max-width:200px">
         <label>Позиция в категории</label>
         <input type="number" id="prod-order" placeholder="1" min="1">
-        <div class="hint">Меньше — выше в списке</div>
+        <div class="hint">Порядок внутри категории. Автоматически подставляется при выборе категории.</div>
       </div>
 
       <hr class="div">
@@ -1204,10 +1204,21 @@ async function renderProds() {
   const lbl = document.getElementById('prod-filter-lbl')?.value||'';
   
   // Получаем товары с именами категорий и брендов
-  let query = 'products?select=*,categories(name),brands(name)&order=display_order';
+  let query = 'products?select=*,categories(name,display_order,parent:categories!parent_id(display_order)),brands(name)';
   if (cat) query += `&category_id=eq.${cat}`;
   // Для фильтра по лейблам используем contains в jsonb (это чуть сложнее, проще отфильтровать на клиенте)
   let prods = await API(query);
+  
+  // Сортируем как на витрине: папка → категория → товар
+  prods.sort((a, b) => {
+    const folderA = a.categories?.parent?.display_order ?? 999;
+    const folderB = b.categories?.parent?.display_order ?? 999;
+    if (folderA !== folderB) return folderA - folderB;
+    const catA = a.categories?.display_order ?? 999;
+    const catB = b.categories?.display_order ?? 999;
+    if (catA !== catB) return catA - catB;
+    return (a.display_order ?? 999) - (b.display_order ?? 999);
+  });
   
   // Клиентская фильтрация по тексту и лейблам
   if (q)   prods = prods.filter(p => p.name.toLowerCase().includes(q));
@@ -1286,7 +1297,14 @@ async function openProdModal(id) {
     document.getElementById('prod-brand').value = '';
     document.getElementById('prod-price').value = '';
     document.getElementById('prod-qty').value = 1;
-    document.getElementById('prod-order').value = (await API('products?select=display_order')).length + 1;
+    const catId = document.getElementById('prod-cat').value;
+    if (catId) {
+      const inCat = await API(`products?select=display_order&category_id=eq.${catId}`);
+      const maxOrder = inCat.length ? Math.max(...inCat.map(p => p.display_order || 0)) : 0;
+      document.getElementById('prod-order').value = maxOrder + 1;
+    } else {
+      document.getElementById('prod-order').value = 1;
+    }
     LIDS.forEach(([inputId]) => { document.getElementById(inputId).checked = false; syncL(LPFX[inputId], inputId); });
     document.getElementById('prod-visible').checked = true;
     syncL('lp-visible', 'prod-visible');
@@ -1298,6 +1316,16 @@ async function openProdModal(id) {
   calcPack();
   openM('m-prod');
   setTimeout(() => document.getElementById('prod-name').focus(), 80);
+}
+
+async function recalcProdOrder() {
+  const id = document.getElementById('prod-id').value;
+  if (id) return; // редактирование — не трогаем
+  const catId = document.getElementById('prod-cat').value;
+  if (!catId) { document.getElementById('prod-order').value = 1; return; }
+  const inCat = await API(`products?select=display_order&category_id=eq.${catId}`);
+  const maxOrder = inCat.length ? Math.max(...inCat.map(p => p.display_order || 0)) : 0;
+  document.getElementById('prod-order').value = maxOrder + 1;
 }
 
 function calcPack() {

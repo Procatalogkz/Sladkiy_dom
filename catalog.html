@@ -636,8 +636,8 @@
     // Загрузка данных
     async function loadData() {
       try {
-        categories = await API('categories?is_folder=eq.false&order=display_order');
-        const prods = await API('products?select=*,categories(name),brands(name)&is_visible=eq.true&order=display_order');
+        categories = await API('categories?is_folder=eq.false&select=*,parent:categories!parent_id(display_order)&order=display_order');
+        const prods = await API('products?select=*,categories(name,display_order,parent:categories!parent_id(display_order)),brands(name)&is_visible=eq.true&order=display_order');
         allProducts = prods;
         renderCategoryFilters();
         renderProducts();
@@ -682,6 +682,20 @@
       let filtered = allProducts;
       if (activeCategory !== 'all') filtered = filtered.filter(p => p.category_id === activeCategory);
       if (searchText) filtered = filtered.filter(p => p.name.toLowerCase().includes(searchText));
+
+      // Трёхуровневая сортировка: папка → категория → товар
+      filtered.sort((a, b) => {
+        // 1. Позиция папки
+        const folderA = a.categories?.parent?.display_order ?? 999;
+        const folderB = b.categories?.parent?.display_order ?? 999;
+        if (folderA !== folderB) return folderA - folderB;
+        // 2. Позиция категории внутри папки
+        const catA = a.categories?.display_order ?? 999;
+        const catB = b.categories?.display_order ?? 999;
+        if (catA !== catB) return catA - catB;
+        // 3. Позиция товара внутри категории
+        return (a.display_order ?? 999) - (b.display_order ?? 999);
+      });
 
       const grid = document.getElementById('products-container');
       if (!grid) {
