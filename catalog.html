@@ -629,10 +629,11 @@
     }
 
     // Состояние
-    let allProducts = [];
-    let categories = [];
-    let folders = []; // папки
+    let allProducts    = [];
+    let categories     = [];
+    let folders        = []; // папки
     let activeCategory = 'all';
+    let currentCatalog = null; // { id, name, slug } если открыт по ссылке
 
     // Загрузка данных
     async function loadData() {
@@ -671,7 +672,41 @@
           return (a.display_order ?? 999) - (b.display_order ?? 999);
         });
 
-        allProducts = prods;
+        // Проверяем параметр ?c= в URL
+        const catalogSlug = new URLSearchParams(window.location.search).get('c');
+        if (catalogSlug) {
+          try {
+            const catalogs = await API(`catalogs?slug=eq.${catalogSlug}&limit=1`);
+            if (catalogs.length) {
+              currentCatalog = catalogs[0];
+              // Загружаем цены этого каталога
+              const prices = await API(`catalog_prices?catalog_id=eq.${currentCatalog.id}&is_visible=eq.true`);
+              const priceMap = {};
+              prices.forEach(cp => { priceMap[cp.product_id] = cp.price_per_unit; });
+              // Подставляем цены — если товар есть в каталоге, берём цену каталога
+              // Если нет — скрываем товар (он не в этом каталоге)
+              prods.forEach(p => {
+                if (priceMap[p.id] !== undefined) {
+                  p.price_per_unit = priceMap[p.id];
+                  p._in_catalog = true;
+                } else {
+                  p._in_catalog = false;
+                }
+              });
+              // Оставляем только товары каталога
+              allProducts = prods.filter(p => p._in_catalog);
+            } else {
+              allProducts = prods;
+            }
+          } catch(e) {
+            console.error('Ошибка загрузки каталога:', e);
+            allProducts = prods;
+          }
+        } else {
+          allProducts = prods;
+        }
+
+        renderCatalogHeader();
         renderCategoryFilters();
         renderProducts();
       } catch (e) {
@@ -865,6 +900,39 @@
         modal.classList.remove('active');
       }
     });
+
+    function renderCatalogHeader() {
+      if (!currentCatalog) return;
+      // Меняем заголовок вкладки браузера
+      document.title = currentCatalog.name + ' — Каталог';
+      // Вставляем название каталога в строку топбара рядом с поиском
+      const topbar = document.querySelector('.topbar');
+      if (!topbar) return;
+      const existing = document.getElementById('catalog-name-bar');
+      if (existing) existing.remove();
+      // Добавляем плашку с названием внутрь topbar-row перед поиском
+      const topbarRow = document.querySelector('.topbar-row');
+      if (!topbarRow) return;
+      const badge = document.createElement('div');
+      badge.id = 'catalog-name-bar';
+      badge.style.cssText = [
+        'display:flex',
+        'align-items:center',
+        'gap:5px',
+        'background:rgba(0,102,204,0.12)',
+        'color:#0066cc',
+        'border:1px solid rgba(0,102,204,0.25)',
+        'border-radius:20px',
+        'padding:5px 12px',
+        'font-size:12px',
+        'font-weight:700',
+        'white-space:nowrap',
+        'flex-shrink:0',
+        'order:-1'
+      ].join(';');
+      badge.innerHTML = '📋 ' + currentCatalog.name;
+      topbarRow.insertBefore(badge, topbarRow.firstChild);
+    }
 
     function toggleMenu() {
       const menu    = document.getElementById('cat-menu');

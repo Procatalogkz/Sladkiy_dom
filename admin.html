@@ -202,6 +202,32 @@ pre.code{background:var(--bg3);border:1px solid var(--border);border-radius:var(
 .folder-children table{width:100%}
 .folder-children th{background:var(--bg2)}
 
+/* ── КАРТОЧКИ ТОВАРОВ В КАТАЛОГЕ ── */
+.cp-card {
+  background: var(--bg3);
+  border: 2px solid transparent;
+  border-radius: var(--r2);
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: all .15s;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  user-select: none;
+}
+.cp-card:hover { background: var(--bg4); border-color: var(--border2); }
+.cp-card.selected { border-color: var(--accent); background: rgba(232,197,71,.07); }
+.cp-card-name { font-size: 13px; font-weight: 600; line-height: 1.3; }
+.cp-card-base { font-size: 11px; color: var(--muted); }
+.cp-card-price-wrap { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+.cp-card-price-wrap label { font-size: 10px; color: var(--muted); white-space: nowrap; }
+.cp-card-price-wrap input {
+  width: 100%; padding: 5px 8px; font-size: 13px; font-weight: 700;
+  background: var(--bg); border: 1px solid var(--border2); border-radius: 6px;
+  color: var(--accent);
+}
+.cp-card-price-wrap input:focus { border-color: var(--accent); }
+
 @media(max-width:960px){
   :root{--sidebar:60px}
   .sb-logo small,.sb-item span:not(.ico),.sb-section,.sb-uname,.sb-urole,.sb-logo br+*,.bc{display:none}
@@ -491,6 +517,9 @@ const API = (endpoint, options = {}) => {
       <div class="sb-item"        id="nav-cats"     onclick="go('cats')">     <span class="ico">📂</span><span>Категории</span>  <span class="bc" id="cnt-cats">0</span></div>
       <div class="sb-item"        id="nav-brands"   onclick="go('brands')">   <span class="ico">🏷️</span><span>Бренды / ТМ</span><span class="bc" id="cnt-brands">0</span></div>
       <div class="sb-item"        id="nav-products" onclick="go('products')"> <span class="ico">📦</span><span>Товары</span>     <span class="bc" id="cnt-prods">0</span></div>
+      <div class="sb-item"        id="nav-catalogs" onclick="go('catalogs')"> <span class="ico">🔗</span><span>Каталоги</span>   <span class="bc" id="cnt-catalogs">0</span></div>
+      <div class="sb-section">Инструменты</div>
+      <div class="sb-item" onclick="window.open('coverage.html','_blank')">   <span class="ico">🗺️</span><span>Sales Coverage Map</span></div>
     </nav>
     <div class="sb-footer">
       <div class="sb-user">
@@ -555,6 +584,23 @@ const API = (endpoint, options = {}) => {
         </div>
       </div>
 
+      <!-- ── CATALOGS ── -->
+      <div id="page-catalogs" style="display:none">
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Название каталога</th>
+                <th>Ссылка</th>
+                <th>Товаров</th>
+                <th style="width:200px">Действия</th>
+              </tr>
+            </thead>
+            <tbody id="catalogs-body"></tbody>
+          </table>
+        </div>
+      </div>
+
       <!-- ── BRANDS ── -->
       <div id="page-brands" style="display:none">
         <div class="tbl-wrap">
@@ -601,6 +647,116 @@ const API = (endpoint, options = {}) => {
 </div>
 
 <!-- ═══════════════ MODALS ═══════════════ -->
+
+<!-- CATALOG: НОВЫЙ КАТАЛОГ -->
+<div class="overlay" id="m-catalog">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title" id="m-catalog-title">Новый каталог</div>
+      <button class="modal-x" onclick="closeM('m-catalog')">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="catalog-id">
+      <div class="fg">
+        <label>Название каталога *</label>
+        <input type="text" id="catalog-name" placeholder="Например: Оптовый прайс">
+      </div>
+      <div class="fg">
+        <label>Slug (для ссылки) *</label>
+        <input type="text" id="catalog-slug" placeholder="opt" oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9-]/g,'')">
+        <div class="hint">Только латинские буквы, цифры и дефис. Ссылка будет: catalog.html?c=<b id="slug-preview">opt</b></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeM('m-catalog')">Отмена</button>
+      <button class="btn btn-primary" onclick="saveCatalog()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- CATALOG: ДОБАВИТЬ ТОВАР В КАТАЛОГ -->
+<div class="overlay" id="m-catalog-prod">
+  <div class="modal" style="max-width:960px;width:96vw;height:90vh;display:flex;flex-direction:column">
+    <div class="modal-head" style="flex-shrink:0">
+      <div class="modal-title">Добавить товары в каталог</div>
+      <button class="modal-x" onclick="closeM('m-catalog-prod')">×</button>
+    </div>
+    <input type="hidden" id="cp-catalog-id">
+    <input type="hidden" id="cp-price-id">
+
+    <!-- Поиск -->
+    <div style="padding:12px 22px 0;flex-shrink:0">
+      <input type="text" id="cp-search" placeholder="🔍 Поиск по названию..." oninput="filterCpLeft()" style="width:100%">
+    </div>
+
+    <!-- Три колонки -->
+    <div style="display:grid;grid-template-columns:1fr 80px 1fr;gap:0;flex:1;overflow:hidden;padding:14px 22px;gap:12px">
+
+      <!-- ЛЕВАЯ: доступные товары -->
+      <div style="display:flex;flex-direction:column;gap:8px;overflow:hidden">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em">
+          Доступные товары <span id="cp-left-count" style="color:var(--accent)"></span>
+        </div>
+        <div id="cp-left-list" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding-right:4px"></div>
+      </div>
+
+      <!-- ЦЕНТР: кнопки -->
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px">
+        <button class="btn btn-primary btn-sm" onclick="cpMoveSelected()" style="writing-mode:horizontal-tb;padding:10px 8px;font-size:18px" title="Перенести выбранное">→</button>
+        <button class="btn btn-sm btn-ghost" onclick="cpMoveAll()" style="font-size:10px;text-align:center;line-height:1.3;padding:8px 6px">Все<br>→→</button>
+        <button class="btn btn-sm btn-ghost" onclick="cpRemoveSelected()" style="font-size:18px;padding:10px 8px" title="Убрать выбранное">←</button>
+      </div>
+
+      <!-- ПРАВАЯ: товары в каталоге -->
+      <div style="display:flex;flex-direction:column;gap:8px;overflow:hidden">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em">
+          В каталоге <span id="cp-right-count" style="color:var(--accent)"></span>
+        </div>
+        <div id="cp-right-list" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding-right:4px"></div>
+      </div>
+    </div>
+
+    <div class="modal-footer" style="flex-shrink:0">
+      <span style="font-size:12px;color:var(--muted);flex:1">Кликни карточку чтобы выбрать, потом нажми →</span>
+      <button class="btn btn-ghost" onclick="closeM('m-catalog-prod')">Отмена</button>
+      <button class="btn btn-primary" onclick="saveCatalogPrice()">💾 Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- CATALOG: ПРОСМОТР ТОВАРОВ КАТАЛОГА -->
+<div class="overlay" id="m-catalog-view">
+  <div class="modal wide" style="max-width:760px">
+    <div class="modal-head">
+      <div class="modal-title" id="m-catalog-view-title">Товары каталога</div>
+      <button class="modal-x" onclick="closeM('m-catalog-view')">×</button>
+    </div>
+    <div class="modal-body" style="padding:0">
+      <div style="padding:16px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
+        <button class="btn btn-primary btn-sm" id="btn-add-to-catalog" onclick="openAddToCatalog()">+ Добавить товар</button>
+        <span style="font-size:12px;color:var(--muted)" id="catalog-link-display"></span>
+        <button class="btn btn-sm btn-ghost" id="btn-copy-link" onclick="copyCatalogLink()">📋 Скопировать ссылку</button>
+      </div>
+      <div class="tbl-wrap" style="border:none;border-radius:0">
+        <table>
+          <thead>
+            <tr>
+              <th>Товар</th>
+              <th>Базовая цена</th>
+              <th>Цена в каталоге</th>
+              <th>Цена уп.</th>
+              <th style="width:80px">Действия</th>
+            </tr>
+          </thead>
+          <tbody id="catalog-prods-body"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeM('m-catalog-view')">Закрыть</button>
+    </div>
+  </div>
+</div>
 
 <!-- FOLDER -->
 <div class="overlay" id="m-folder">
@@ -782,11 +938,12 @@ const API = (endpoint, options = {}) => {
 // ═══════════════════════════════════════════════════════
 // NAVIGATION
 // ═══════════════════════════════════════════════════════
-const PAGES = ['dash','cats','brands','products'];
-const TITLES = { dash:'Дашборд', cats:'Категории', brands:'Бренды / ТМ', products:'Товары' };
+const PAGES = ['dash','cats','brands','products','catalogs'];
+const TITLES = { dash:'Дашборд', cats:'Категории', brands:'Бренды / ТМ', products:'Товары', catalogs:'Каталоги' };
 const ACTIONS = {
   brands:   ()=>`<button class="btn btn-primary btn-sm" onclick="openBrandModal()">+ Бренд</button>`,
   products: ()=>`<button class="btn btn-primary btn-sm" onclick="openProdModal()">+ Товар</button>`,
+  catalogs: ()=>`<button class="btn btn-primary btn-sm" onclick="openCatalogModal()">+ Каталог</button>`,
 };
 
 function go(page) {
@@ -810,6 +967,7 @@ function go(page) {
   if(page==='brands')   renderBrands();
   if(page==='products') { fillProdSelects(); renderProds(); }
   if(page==='dash')     renderDash();
+  if(page==='catalogs') renderCatalogs();
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1024,7 +1182,7 @@ async function saveFolder() {
     saveBtn.disabled = false; saveBtn.textContent = orig;
   }
 }
-    
+
 // ── CATEGORY MODAL ──
 async function openCatModal(id, preselectedFolderId) {
   // Загружаем список папок для селекта
@@ -1500,7 +1658,16 @@ async function confirmDel(type, id, label, cnt) {
 // ═══════════════════════════════════════════════════════
 function openM(id) { document.getElementById(id).classList.add('open'); }
 function closeM(id){ document.getElementById(id).classList.remove('open'); }
-document.querySelectorAll('.overlay').forEach(o=>{ o.addEventListener('click',e=>{ if(e.target===o) o.classList.remove('open'); }); });
+// Список модалок которые НЕ закрываются по клику вне
+const NO_OUTSIDE_CLOSE = ['m-catalog-prod'];
+
+document.querySelectorAll('.overlay').forEach(o => {
+  o.addEventListener('click', e => {
+    if (e.target === o && !NO_OUTSIDE_CLOSE.includes(o.id)) {
+      o.classList.remove('open');
+    }
+  });
+});
 document.addEventListener('keydown',e=>{ if(e.key==='Escape') document.querySelectorAll('.overlay.open').forEach(o=>o.classList.remove('open')); });
 
 function toast(msg,type='i') {
@@ -1542,6 +1709,381 @@ uz.addEventListener('drop',e=>{
   const f=e.dataTransfer.files[0];
   if(f&&f.type.startsWith('image/')){ const dt=new DataTransfer(); dt.items.add(f); const inp=document.getElementById('prod-file'); inp.files=dt.files; onFile(inp); }
 });
+
+// ═══════════════════════════════════════════════════════
+// КАТАЛОГИ
+// ═══════════════════════════════════════════════════════
+let currentCatalogId   = null;
+let currentCatalogSlug = null;
+let allProdsForCatalog = [];
+
+// ── Список каталогов ──
+async function renderCatalogs() {
+  const body = document.getElementById('catalogs-body');
+  body.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--muted)">Загрузка...</td></tr>`;
+  try {
+    const catalogs = await API('catalogs?order=created_at');
+    document.getElementById('cnt-catalogs').textContent = catalogs.length;
+    if (!catalogs.length) {
+      body.innerHTML = `<tr><td colspan="4">${emptyHtml('🔗','Каталогов нет','Создайте первый каталог')}</td></tr>`;
+      return;
+    }
+    // Для каждого каталога считаем кол-во товаров
+    const counts = await Promise.all(catalogs.map(c =>
+      API(`catalog_prices?catalog_id=eq.${c.id}&select=id`).then(r => r.length)
+    ));
+    body.innerHTML = catalogs.map((c, i) => `
+      <tr>
+        <td><strong>${c.name}</strong></td>
+        <td>
+          <span style="font-size:12px;color:var(--muted);font-family:monospace">catalog.html?c=${c.slug}</span>
+        </td>
+        <td><span style="color:var(--muted)">${counts[i]} тов.</span></td>
+        <td><div class="td-act">
+          <button class="btn btn-xs btn-primary" onclick="openCatalogView('${c.id}','${c.slug}','${c.name}')">📋 Товары</button>
+          <button class="btn btn-xs btn-ghost" onclick="copyCatalogLinkById('${c.slug}')">🔗</button>
+          <button class="btn btn-xs btn-danger" onclick="deleteCatalog('${c.id}')">✕</button>
+        </div></td>
+      </tr>`).join('');
+  } catch(e) {
+    toast('Ошибка загрузки каталогов', 'e');
+    console.error(e);
+  }
+}
+
+// ── Создать каталог ──
+function openCatalogModal() {
+  document.getElementById('m-catalog-title').textContent = 'Новый каталог';
+  document.getElementById('catalog-id').value   = '';
+  document.getElementById('catalog-name').value = '';
+  document.getElementById('catalog-slug').value = '';
+  document.getElementById('slug-preview').textContent = '';
+  openM('m-catalog');
+  setTimeout(() => document.getElementById('catalog-name').focus(), 80);
+}
+
+// Автогенерация slug из названия
+document.addEventListener('DOMContentLoaded', () => {
+  const nameEl = document.getElementById('catalog-name');
+  const slugEl = document.getElementById('catalog-slug');
+  if (nameEl) {
+    nameEl.addEventListener('input', () => {
+      if (!slugEl.dataset.manual) {
+        const slug = nameEl.value.toLowerCase()
+          .replace(/[а-яёa-z0-9\s-]/gi, c => {
+            const map = {'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'yo','ж':'zh','з':'z','и':'i','й':'j','к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r','с':'s','т':'t','у':'u','ф':'f','х':'h','ц':'ts','ч':'ch','ш':'sh','щ':'sch','ъ':'','ы':'y','ь':'','э':'e','ю':'yu','я':'ya',' ':'-'};
+            return map[c] || c;
+          })
+          .replace(/[^a-z0-9-]/g, '')
+          .replace(/-+/g, '-').slice(0, 30);
+        slugEl.value = slug;
+        document.getElementById('slug-preview').textContent = slug;
+      }
+    });
+    slugEl.addEventListener('input', () => {
+      slugEl.dataset.manual = '1';
+      document.getElementById('slug-preview').textContent = slugEl.value;
+    });
+  }
+});
+
+async function saveCatalog() {
+  const name = document.getElementById('catalog-name').value.trim();
+  const slug = document.getElementById('catalog-slug').value.trim();
+  const id   = document.getElementById('catalog-id').value;
+  if (!name) { toast('Введите название','e'); return; }
+  if (!slug) { toast('Введите slug','e'); return; }
+  try {
+    if (id) {
+      await API(`catalogs?id=eq.${id}`, { method: 'PATCH', body: { name, slug } });
+      toast('Каталог обновлён','s');
+    } else {
+      await API('catalogs', { method: 'POST', body: { name, slug } });
+      toast('Каталог создан','s');
+    }
+    closeM('m-catalog');
+    renderCatalogs();
+  } catch(e) {
+    toast('Ошибка: ' + e.message,'e');
+  }
+}
+
+async function deleteCatalog(id) {
+  if (!confirm('Удалить каталог? Все цены в нём тоже удалятся.')) return;
+  try {
+    await API(`catalogs?id=eq.${id}`, { method: 'DELETE' });
+    toast('Каталог удалён','s');
+    renderCatalogs();
+  } catch(e) {
+    toast('Ошибка: ' + e.message,'e');
+  }
+}
+
+// ── Просмотр товаров каталога ──
+async function openCatalogView(catalogId, slug, name) {
+  currentCatalogId   = catalogId;
+  currentCatalogSlug = slug;
+  document.getElementById('m-catalog-view-title').textContent = '📋 ' + name;
+  const link = `${window.location.origin}/${window.location.pathname.replace('admin.html','')}catalog.html?c=${slug}`;
+  document.getElementById('catalog-link-display').textContent = `catalog.html?c=${slug}`;
+  openM('m-catalog-view');
+  await renderCatalogProds(catalogId);
+}
+
+async function renderCatalogProds(catalogId) {
+  const body = document.getElementById('catalog-prods-body');
+  body.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--muted)">Загрузка...</td></tr>`;
+  try {
+    const prices = await API(`catalog_prices?catalog_id=eq.${catalogId}&select=*,products(name,price_per_unit,qty_per_pack,image_public_id)`);
+    if (!prices.length) {
+      body.innerHTML = `<tr><td colspan="5">${emptyHtml('📦','Нет товаров','Нажмите «+ Добавить товар»')}</td></tr>`;
+      return;
+    }
+    body.innerHTML = prices.map(cp => {
+      const p = cp.products;
+      const basePrice = p?.price_per_unit || 0;
+      const qty = p?.qty_per_pack || 1;
+      const catalogPackPrice = cp.price_per_unit * qty;
+      return `<tr>
+        <td><strong>${p?.name || '—'}</strong></td>
+        <td style="color:var(--muted)">${basePrice.toLocaleString()} ₸</td>
+        <td style="font-weight:700;color:var(--accent)">${cp.price_per_unit.toLocaleString()} ₸</td>
+        <td style="color:var(--muted)">${catalogPackPrice.toLocaleString()} ₸</td>
+        <td><div class="td-act">
+          <button class="btn btn-xs btn-ghost" onclick="editCatalogPrice('${cp.id}','${cp.product_id}',${cp.price_per_unit})">✏️</button>
+          <button class="btn btn-xs btn-danger" onclick="deleteCatalogPrice('${cp.id}')">✕</button>
+        </div></td>
+      </tr>`;
+    }).join('');
+  } catch(e) {
+    toast('Ошибка загрузки','e');
+  }
+}
+
+// ── Состояние двухпанельного селектора ──
+let _cpLeft  = []; // доступные товары (не в каталоге)
+let _cpRight = []; // товары уже в каталоге (с ценами)
+let _cpSelectedLeft  = new Set();
+let _cpSelectedRight = new Set();
+
+async function openAddToCatalog() {
+  closeM('m-catalog-view');
+  document.getElementById('cp-catalog-id').value = currentCatalogId;
+  document.getElementById('cp-price-id').value   = '';
+  document.getElementById('cp-search').value     = '';
+
+  const [allProds, existing] = await Promise.all([
+    API('products?select=id,name,price_per_unit,qty_per_pack&order=name'),
+    API(`catalog_prices?catalog_id=eq.${currentCatalogId}&select=*,products(name,price_per_unit,qty_per_pack)`)
+  ]);
+
+  const existingMap = {};
+  existing.forEach(e => { existingMap[e.product_id] = e; });
+
+  // Левая — доступные (не в каталоге)
+  _cpLeft = allProds
+    .filter(p => !existingMap[p.id])
+    .map(p => ({ ...p, _newPrice: p.price_per_unit }));
+
+  // Правая — уже в каталоге
+  _cpRight = existing.map(e => ({
+    id: e.product_id,
+    _priceRecordId: e.id,
+    name: e.products?.name || '—',
+    price_per_unit: e.products?.price_per_unit || 0,
+    qty_per_pack: e.products?.qty_per_pack || 1,
+    _newPrice: e.price_per_unit
+  }));
+
+  _cpSelectedLeft.clear();
+  _cpSelectedRight.clear();
+
+  renderCpLeft();
+  renderCpRight();
+  openM('m-catalog-prod');
+}
+
+function filterCpLeft() {
+  renderCpLeft();
+}
+
+function renderCpLeft() {
+  const q = (document.getElementById('cp-search')?.value || '').toLowerCase();
+  const list = document.getElementById('cp-left-list');
+  const filtered = _cpLeft.filter(p => p.name.toLowerCase().includes(q));
+  document.getElementById('cp-left-count').textContent = `(${filtered.length})`;
+  if (!filtered.length) {
+    list.innerHTML = `<div style="text-align:center;padding:24px;color:var(--muted);font-size:13px">Нет доступных товаров</div>`;
+    return;
+  }
+  list.innerHTML = filtered.map(p => `
+    <div class="cp-card ${_cpSelectedLeft.has(p.id) ? 'selected' : ''}"
+         onclick="cpToggleLeft('${p.id}')">
+      <div class="cp-card-name">${p.name}</div>
+      <div class="cp-card-base">База: ${p.price_per_unit.toLocaleString()} ₸ · уп. ${p.qty_per_pack} шт</div>
+    </div>`).join('');
+}
+
+function renderCpRight() {
+  const list = document.getElementById('cp-right-list');
+  document.getElementById('cp-right-count').textContent = `(${_cpRight.length})`;
+  if (!_cpRight.length) {
+    list.innerHTML = `<div style="text-align:center;padding:24px;color:var(--muted);font-size:13px">Пусто — перенесите товары слева</div>`;
+    return;
+  }
+  list.innerHTML = _cpRight.map(p => `
+    <div class="cp-card ${_cpSelectedRight.has(p.id) ? 'selected' : ''}"
+         onclick="cpToggleRight('${p.id}')">
+      <div class="cp-card-name">${p.name}</div>
+      <div class="cp-card-base">База: ${p.price_per_unit.toLocaleString()} ₸ · уп. ${p.qty_per_pack} шт</div>
+      <div class="cp-card-price-wrap">
+        <label>Цена ₸</label>
+        <input type="number" value="${p._newPrice}"
+               onclick="event.stopPropagation()"
+               oninput="cpUpdatePrice('${p.id}', this.value)"
+               min="0">
+      </div>
+    </div>`).join('');
+}
+
+function cpToggleLeft(id) {
+  if (_cpSelectedLeft.has(id)) _cpSelectedLeft.delete(id);
+  else _cpSelectedLeft.add(id);
+  renderCpLeft();
+}
+
+function cpToggleRight(id) {
+  if (_cpSelectedRight.has(id)) _cpSelectedRight.delete(id);
+  else _cpSelectedRight.add(id);
+  renderCpRight();
+}
+
+function cpUpdatePrice(id, val) {
+  const item = _cpRight.find(p => p.id === id);
+  if (item) item._newPrice = parseFloat(val) || 0;
+}
+
+function cpMoveSelected() {
+  if (!_cpSelectedLeft.size) { toast('Выберите товары слева', 'i'); return; }
+  _cpSelectedLeft.forEach(id => {
+    const idx = _cpLeft.findIndex(p => p.id === id);
+    if (idx === -1) return;
+    const item = _cpLeft.splice(idx, 1)[0];
+    _cpRight.push({ ...item, _newPrice: item.price_per_unit, _priceRecordId: null });
+  });
+  _cpSelectedLeft.clear();
+  renderCpLeft();
+  renderCpRight();
+}
+
+function cpMoveAll() {
+  _cpLeft.forEach(item => {
+    _cpRight.push({ ...item, _newPrice: item.price_per_unit, _priceRecordId: null });
+  });
+  _cpLeft = [];
+  _cpSelectedLeft.clear();
+  renderCpLeft();
+  renderCpRight();
+}
+
+function cpRemoveSelected() {
+  if (!_cpSelectedRight.size) { toast('Выберите товары справа', 'i'); return; }
+  _cpSelectedRight.forEach(id => {
+    const idx = _cpRight.findIndex(p => p.id === id);
+    if (idx === -1) return;
+    const item = _cpRight.splice(idx, 1)[0];
+    // Возвращаем в левую (только если нет записи в БД — если есть, удалим при сохранении)
+    _cpLeft.push({ id: item.id, name: item.name, price_per_unit: item.price_per_unit, qty_per_pack: item.qty_per_pack, _newPrice: item.price_per_unit, _removeFromDb: item._priceRecordId });
+  });
+  _cpSelectedRight.clear();
+  renderCpLeft();
+  renderCpRight();
+}
+
+async function saveCatalogPrice() {
+  const catalogId = document.getElementById('cp-catalog-id').value;
+  const priceId   = document.getElementById('cp-price-id').value;
+
+  // Режим редактирования одного товара (старый путь через editCatalogPrice)
+  if (priceId) {
+    const price = parseFloat(document.getElementById('cp-price')?.value);
+    if (isNaN(price) || price < 0) { toast('Введите корректную цену','e'); return; }
+    try {
+      await API(`catalog_prices?id=eq.${priceId}`, { method: 'PATCH', body: { price_per_unit: price } });
+      toast('Цена обновлена','s');
+      closeM('m-catalog-prod');
+      const cats = await API(`catalogs?id=eq.${catalogId}&limit=1`);
+      if (cats.length) await openCatalogView(catalogId, cats[0].slug, cats[0].name);
+    } catch(e) { toast('Ошибка: ' + e.message,'e'); }
+    return;
+  }
+
+  // Новый режим — двухпанельный
+  let saved = 0, updated = 0, removed = 0, errors = 0;
+
+  // 1. Удаляем товары которые убрали из правой панели (были в БД)
+  const toRemove = _cpLeft.filter(p => p._removeFromDb);
+  for (const p of toRemove) {
+    try {
+      await API(`catalog_prices?id=eq.${p._removeFromDb}`, { method: 'DELETE' });
+      removed++;
+    } catch(e) { errors++; }
+  }
+
+  // 2. Сохраняем/обновляем правую панель
+  for (const p of _cpRight) {
+    try {
+      if (p._priceRecordId) {
+        // Уже был в каталоге — обновляем цену
+        await API(`catalog_prices?id=eq.${p._priceRecordId}`, {
+          method: 'PATCH',
+          body: { price_per_unit: p._newPrice }
+        });
+        updated++;
+      } else {
+        // Новый — добавляем
+        await API('catalog_prices', {
+          method: 'POST',
+          body: { catalog_id: catalogId, product_id: p.id, price_per_unit: p._newPrice }
+        });
+        saved++;
+      }
+    } catch(e) { errors++; console.error(e); }
+  }
+
+  const msgs = [];
+  if (saved)   msgs.push(`добавлено ${saved}`);
+  if (updated) msgs.push(`обновлено ${updated}`);
+  if (removed) msgs.push(`удалено ${removed}`);
+  if (msgs.length) toast('✅ ' + msgs.join(', '), 's');
+  if (errors) toast(`Ошибок: ${errors}`, 'e');
+
+  closeM('m-catalog-prod');
+  const cats = await API(`catalogs?id=eq.${catalogId}&limit=1`);
+  if (cats.length) await openCatalogView(catalogId, cats[0].slug, cats[0].name);
+}
+
+async function deleteCatalogPrice(priceId) {
+  if (!confirm('Убрать товар из каталога?')) return;
+  try {
+    await API(`catalog_prices?id=eq.${priceId}`, { method: 'DELETE' });
+    toast('Товар убран из каталога','s');
+    const cats = await API(`catalogs?id=eq.${currentCatalogId}&limit=1`);
+    if (cats.length) await openCatalogView(currentCatalogId, cats[0].slug, cats[0].name);
+  } catch(e) { toast('Ошибка: ' + e.message,'e'); }
+}
+
+// ── Скопировать ссылку ──
+function copyCatalogLink() {
+  const slug = currentCatalogSlug;
+  const url  = `${window.location.origin}${window.location.pathname.replace('admin.html','catalog.html')}?c=${slug}`;
+  navigator.clipboard.writeText(url).then(() => toast('Ссылка скопирована','s'));
+}
+
+function copyCatalogLinkById(slug) {
+  const url = `${window.location.origin}${window.location.pathname.replace('admin.html','catalog.html')}?c=${slug}`;
+  navigator.clipboard.writeText(url).then(() => toast('Ссылка скопирована','s'));
+}
 
 // INIT
 (async function init() {
