@@ -115,12 +115,19 @@
     .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,0,0,0.18); }
     .btn:active { transform: scale(.97); }
     .btn-primary { background: var(--accent); color: #fff; }
-    .btn-success { background: var(--green); color: #fff; }
-    .btn-danger  { background: var(--red); color: #fff; }
-    .btn-orange  { background: var(--orange); color: #fff; }
-    .btn-gray    { background: var(--gray); color: #fff; }
-    .btn-sm { padding: 6px 12px; font-size: 12px; }
-    .btn-full { width: 100%; justify-content: center; }
+.btn-success { background: var(--green); color: #fff; }
+.btn-success {
+  background: var(--green) !important;
+  color: #fff !important;
+  border-color: var(--green) !important;
+}
+.btn-success:hover {
+  background: #218838 !important;
+  border-color: #1e7e34 !important;
+}
+.btn-gray    { background: var(--gray); color: #fff; }
+.btn-sm { padding: 6px 12px; font-size: 12px; }
+.btn-full { width: 100%; justify-content: center; }
 
     /* ── МОДАЛКИ ── */
     .overlay {
@@ -135,11 +142,19 @@
       padding: 28px 26px; width: 90%; max-width: 420px;
       box-shadow: 0 12px 40px rgba(0,0,0,0.2);
     }
-    .modal-title { font-size: 16px; font-weight: 800; margin-bottom: 18px; }
-    .fg { margin-bottom: 14px; }
-    .fg label { display: block; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; }
-    .fg input, .fg select { width: 100%; padding: 10px 13px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; outline: none; transition: border-color .15s; }
-    .fg input:focus, .fg select:focus { border-color: var(--accent); }
+.modal-title { font-size: 16px; font-weight: 800; margin-bottom: 18px; }
+.fg { margin-bottom: 14px; }
+.fg label { display: block; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; }
+.fg input, .fg select { width: 100%; padding: 10px 13px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; outline: none; transition: border-color .15s; }
+.fg input:focus, .fg select:focus { border-color: var(--accent); }
+
+/* Стили для формы входа */
+.login-title { font-size: 20px; font-weight: 700; margin-bottom: 15px; text-align: center; }
+.form-group { margin-bottom: 12px; }
+.form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
+.form-control { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 14px; outline: none; transition: border-color .15s; }
+.form-control:focus { border-color: var(--accent); }
+.error-msg { color: var(--red); font-size: 12px; margin-top: 8px; display: none; }
 
     /* ── УВЕДОМЛЕНИЯ ── */
     .notif-wrap { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
@@ -214,13 +229,32 @@
 
 <div id="login-screen">
   <div class="login-box">
-    <h2>🗺 Зоны ТП</h2>
-    <p>Войдите как администратор или просматривайте без входа</p>
-    <div class="login-err" id="login-err">Неверный логин или пароль</div>
-    <input type="text" id="login-user" placeholder="Логин">
-    <input type="password" id="login-pass" placeholder="Пароль" onkeydown="if(event.key==='Enter')doLogin()">
-    <button class="btn btn-primary btn-full" onclick="doLogin()">Войти как администратор</button>
-    <div class="login-btn-skip" onclick="enterAsViewer()">Просматривать без входа →</div>
+    <div class="login-title">Вход в систему</div>
+    <div id="role-selection" style="display: flex; flex-direction: column; gap: 12px; width: 100%;">
+      <button type="button" class="btn btn-success btn-full" onclick="enterAsViewer()" style="padding: 14px; font-size: 1rem; font-weight: 600; background: var(--green); color: #fff; border: none; border-radius: 6px; cursor: pointer;">
+        Я Торговый представитель
+      </button>
+      <button type="button" class="btn btn-full" onclick="showAdminForm()" style="padding: 14px; font-size: 1rem; font-weight: 600; background: #555; color: #fff; border: none; border-radius: 6px; cursor: pointer;">
+        Я Администратор
+      </button>
+    </div>
+    <div id="admin-credentials-form" style="display: none; width: 100%; margin-top: 5px;">
+      <form id="login-form" onsubmit="event.preventDefault();">
+        <div class="form-group">
+          <label>Логин</label>
+          <input type="text" id="login-username" class="form-control" placeholder="Введи логин" required autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label>Пароль</label>
+          <input type="password" id="login-password" class="form-control" placeholder="••••••••" required>
+        </div>
+        <div class="error-msg" id="login-error">Неверный логин или пароль</div>
+        <div style="display: flex; gap: 10px; margin-top: 15px;">
+          <button type="button" class="btn" onclick="hideAdminForm()" style="flex: 1;">Назад</button>
+          <button type="button" class="btn btn-primary" onclick="attemptLogin()" style="flex: 2;">Войти как Админ</button>
+        </div>
+      </form>
+    </div>
   </div>
 </div>
 
@@ -355,6 +389,7 @@ const API = (endpoint, options = {}) => {
 // СОСТОЯНИЕ
 // ════════════════════════════════════════
 let isAdmin       = false;
+let isReadOnly    = false;
 let myMap         = null;
 let isDrawing     = false;
 let currentPoly   = null;
@@ -372,22 +407,41 @@ const mapObjects = {};
 // ════════════════════════════════════════
 // АВТОРИЗАЦИЯ
 // ════════════════════════════════════════
-function doLogin() {
-  const user = document.getElementById('login-user').value.trim();
-  const pass = document.getElementById('login-pass').value;
-  const err  = document.getElementById('login-err');
-
-  if (user === ADMIN_LOGIN && pass === ADMIN_PASS) {
-    isAdmin = true;
-    err.style.display = 'none';
-    startApp();
-  } else {
-    err.style.display = 'block';
+function initAuth() {
+  // Если пришел флаг обхода от торгового представителя — сразу входим как гость
+  if (localStorage.getItem('rep_bypass') === 'true') {
+    localStorage.removeItem('rep_bypass'); // Сразу стираем, чтобы не висел постоянным входом
+    enterAsViewer();
+    return;
   }
+  
+  const authStatus = localStorage.getItem('auth');
+  // Если вообще нет флага авторизации — отправляем на индекс
+  if (!authStatus) {
+    window.location.href = 'index.html';
+    return;
+  }
+  // Если зашел торговый представитель (гость) — включаем режим просмотра
+  if (authStatus === 'guest') {
+    isReadOnly = true;
+    const adminToolbar = document.getElementById('admin-toolbar');
+    if (adminToolbar) adminToolbar.style.display = 'none';
+  } else {
+    // Если админ — режим редактирования активен
+    isReadOnly = false;
+  }
+  // Скрываем встроенный экран логина самого файла coverage
+  const loginScreen = document.getElementById('login-screen');
+  if (loginScreen) {
+    loginScreen.classList.add('hidden');
+  }
+  // Запускаем ваш оригинальный процесс загрузки карты и данных из Supabase
+  initMap();
 }
 
 function enterAsViewer() {
   isAdmin = false;
+  localStorage.setItem('auth', 'guest');
   startApp();
 }
 
@@ -398,7 +452,7 @@ function startApp() {
   if (isAdmin) {
     document.getElementById('admin-toolbar').style.display = 'flex';
   }
-  ymaps.ready(initMap);
+  ymaps.ready(initAuth);
 }
 
 // ════════════════════════════════════════
@@ -951,11 +1005,42 @@ function notify(msg, type = 'success') {
   setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .3s'; setTimeout(() => el.remove(), 300); }, 3000);
 }
 
+// Показывает поля ввода для администратора
+function showAdminForm() {
+  // Прячем выбор ролей, показываем форму ввода
+  document.getElementById('role-selection').style.display = 'none';
+  document.getElementById('admin-credentials-form').style.display = 'block';
+  setTimeout(() => {
+    const input = document.getElementById('login-username');
+    if(input) input.focus();
+  }, 50);
+}
+
+// Возвращает к выбору роли (кнопка "Назад")
+function hideAdminForm() {
+  // Прячем форму ввода, возвращаем выбор ролей
+  document.getElementById('admin-credentials-form').style.display = 'none';
+  document.getElementById('role-selection').style.display = 'flex';
+  const err = document.getElementById('login-error');
+  if(err) err.style.display = 'none';
+}
+
 // ════════════════════════════════════════
-// ФУНКЦИИ ТЕМЫ И ПЕЧАТИ
+// АВТОРИЗАЦИЯ (обновлённая)
 // ════════════════════════════════════════
-function toggleTheme() {
-  document.body.classList.toggle('dark-theme');
+function attemptLogin() {
+  const user = document.getElementById('login-username').value.trim();
+  const pass = document.getElementById('login-password').value;
+  const err  = document.getElementById('login-error');
+
+  if (user === ADMIN_LOGIN && pass === ADMIN_PASS) {
+    isAdmin = true;
+    localStorage.setItem('auth', 'true');
+    err.style.display = 'none';
+    startApp();
+  } else {
+    err.style.display = 'block';
+  }
 }
 
 function printMap() {
