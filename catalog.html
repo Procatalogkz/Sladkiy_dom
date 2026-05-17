@@ -825,7 +825,7 @@
         return `
           <div class="product-card">
             ${badgesHtml}
-            <img class="product-img" src="${cloudinaryUrl(p.image_public_id)}" alt="${escapeHtml(p.name)}" onclick="openImageModal(this.src)">
+            <img class="product-img" src="${cloudinaryUrl(p.image_public_id)}" alt="${escapeHtml(p.name)}" onclick="openImageModal(this.src)" loading="lazy" decoding="async">
             <div class="product-body">
               <!-- 1. Название -->
               <h2 style="font-size:clamp(20px,5vw,30px);font-weight:900;line-height:1.1;margin-bottom:12px">
