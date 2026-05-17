@@ -181,49 +181,137 @@
     .draw-status.visible { display: flex; align-items: center; }
 
     @media (max-width: 640px) {
-      .sidebar { width: 100%; height: auto; max-height: 40vh; }
+      /* Сайдбар скрываем — фильтры переезжают в мобильную панель */
+      .sidebar { display: none !important; }
       #app { flex-direction: column; }
+      .map-wrap { height: 100vh; }
     }
 
+    /* ── ТЁМНАЯ ТЕМА ── */
+    body.dark-theme {
+      --bg: #1a1a2e; --white: #16213e; --border: #0f3460;
+      --text: #e0e0e0; --muted: #a0a0b0;
+      background: var(--bg); color: var(--text);
+    }
+    body.dark-theme .sidebar,
+    body.dark-theme .login-box,
+    body.dark-theme .modal-box { background: var(--white); color: var(--text); border-color: var(--border); }
+    body.dark-theme .sb-head,
+    body.dark-theme .sb-section { border-color: var(--border); }
+    body.dark-theme .day-item:hover,
+    body.dark-theme .rep-item:hover { background: rgba(255,255,255,0.06); }
+    body.dark-theme .day-item.active,
+    body.dark-theme .rep-item.active { background: rgba(0,102,204,0.2); }
+    body.dark-theme .btn-tool { background: #0f3460; color: #e0e0e0; border-color: #0f3460; }
+    body.dark-theme .btn-tool:hover { background: #1a4a80; }
+    body.dark-theme #map { filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9); }
+    body.dark-theme .ymaps-2-1-79-placemark,
+    body.dark-theme .ymaps-2-1-79-balloon { filter: invert(1) hue-rotate(180deg); }
+    body.dark-theme .zone-list-item:hover { background: rgba(255,255,255,0.06); }
+    body.dark-theme .fg input,
+    body.dark-theme .fg select,
+    body.dark-theme .form-control { background: #0f3460; border-color: #1a4a80; color: var(--text); }
+    body.dark-theme .login-box input { background: #0f3460; border-color: #1a4a80; color: var(--text); }
+
+    /* ── МОБИЛЬНАЯ ПАНЕЛЬ ФИЛЬТРОВ ── */
+    .mob-bar {
+      display: none;
+      position: fixed; top: 0; left: 0; right: 0;
+      z-index: 200;
+      background: rgba(255,255,255,0.95);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+      padding: 8px 12px;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: nowrap;
+    }
+    body.dark-theme .mob-bar { background: rgba(22,33,62,0.97); border-color: var(--border); }
+    @media (max-width: 640px) { .mob-bar { display: flex; } }
+
+    .mob-filter-btn {
+      flex: 1;
+      padding: 8px 10px;
+      border-radius: 20px;
+      border: 1.5px solid var(--border);
+      background: #fff;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      transition: all .15s;
+      min-width: 0;
+    }
+    body.dark-theme .mob-filter-btn { background: #16213e; color: var(--text); border-color: var(--border); }
+    .mob-filter-btn.has-value { border-color: var(--accent); color: var(--accent); background: rgba(0,102,204,0.08); }
+    .mob-tool-btn {
+      width: 36px; height: 36px; border-radius: 10px;
+      border: 1.5px solid var(--border); background: #fff;
+      font-size: 16px; cursor: pointer; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      transition: all .15s;
+    }
+    body.dark-theme .mob-tool-btn { background: #16213e; border-color: var(--border); }
+    .mob-tool-btn:hover { border-color: var(--accent); }
+
+    /* Дропдаун для мобильных фильтров */
+    .mob-dropdown {
+      position: fixed;
+      top: 56px; left: 12px; right: 12px;
+      z-index: 300;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+      overflow: hidden;
+      display: none;
+      flex-direction: column;
+      max-height: 60vh;
+      overflow-y: auto;
+    }
+    body.dark-theme .mob-dropdown { background: #16213e; border-color: var(--border); }
+    .mob-dropdown.open { display: flex; }
+    .mob-dropdown-head {
+      padding: 12px 16px 8px;
+      font-size: 11px; font-weight: 700; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .07em;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .mob-dd-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 16px;
+      font-size: 14px; font-weight: 500;
+      cursor: pointer; transition: background .12s;
+      border-bottom: 1px solid rgba(0,0,0,0.04);
+    }
+    .mob-dd-item:last-child { border-bottom: none; }
+    .mob-dd-item:hover { background: rgba(0,102,204,0.06); }
+    .mob-dd-item.active { background: rgba(0,102,204,0.1); color: var(--accent); font-weight: 700; }
+    body.dark-theme .mob-dd-item:hover { background: rgba(255,255,255,0.06); }
+    body.dark-theme .mob-dd-item.active { background: rgba(0,102,204,0.2); }
+    .mob-dd-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+    .mob-dd-count { margin-left: auto; font-size: 11px; color: var(--muted); }
+    .mob-dd-overlay { position: fixed; inset: 0; z-index: 250; display: none; }
+    .mob-dd-overlay.open { display: block; }
 /* Переключатели темы и печати в сайдбаре */
-.sb-tools {
-  display: flex;
-  gap: 8px;
-  margin-top: 10px;
-}
-.btn-tool {
-  flex: 1;
-  padding: 6px;
-  font-size: 11px;
-  font-weight: 600;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: #f8f9fa;
-  cursor: pointer;
-}
+.sb-tools { display: flex; gap: 8px; margin-top: 10px; }
+.btn-tool { flex: 1; padding: 6px; font-size: 11px; font-weight: 600; border: 1px solid var(--border); border-radius: 6px; background: #f8f9fa; cursor: pointer; }
 .btn-tool:hover { background: #e9ecef; }
 .btn-tool:active { transform: scale(0.97); }
 
-    /* Эффект темной темы для Яндекс.Карт */
-    .dark-theme #map {
-      filter: invert(1) hue-rotate(180deg) brightness(0.95);
-    }
-    /* Возвращаем меткам оригинальные цвета в темной теме */
-    .dark-theme .ymaps-2-1-79-placemark, 
-    .dark-theme .ymaps-2-1-79-balloon {
-      filter: invert(1) hue-rotate(180deg);
-    }
-
-    /* Настройки для вывода на печать */
-    @media print {
-      body, #app { display: block !important; height: auto !important; background: #fff; }
-      .sidebar, .map-toolbar, #draw-status, .notif-wrap, .ymaps-2-1-79-controls__control { 
-        display: none !important; 
-      }
-      .map-wrap { width: 100% !important; height: 100vh !important; position: absolute; inset: 0; }
-      #map { width: 100% !important; height: 100% !important; }
-    }
-  </style>
+/* Настройки для вывода на печать */
+@media print {
+  body, #app { display: block !important; height: auto !important; background: #fff; }
+  .sidebar, .mob-bar, .mob-dropdown, .map-toolbar, #draw-status, .notif-wrap, .ymaps-2-1-79-controls__control { display: none !important; }
+  .map-wrap { width: 100% !important; height: 100vh !important; position: absolute; inset: 0; }
+  #map { width: 100% !important; height: 100% !important; }
+}
+</style>
 </head>
 <body>
 
@@ -257,6 +345,23 @@
     </div>
   </div>
 </div>
+
+<!-- ── МОБИЛЬНАЯ ПАНЕЛЬ ФИЛЬТРОВ ── -->
+<div class="mob-bar" id="mob-bar">
+  <button class="mob-filter-btn" id="mob-btn-day" onclick="toggleMobDropdown('day')">📅 День</button>
+  <button class="mob-filter-btn" id="mob-btn-rep" onclick="toggleMobDropdown('rep')">👤 ТП</button>
+  <button class="mob-tool-btn" onclick="toggleTheme()" title="Сменить тему">🌓</button>
+  <button class="mob-tool-btn" onclick="printMap()" title="Печать">🖨</button>
+</div>
+
+<!-- Оверлей под дропдауном -->
+<div class="mob-dd-overlay" id="mob-dd-overlay" onclick="closeMobDropdown()"></div>
+
+<!-- Дропдаун: дни -->
+<div class="mob-dropdown" id="mob-dd-day"></div>
+
+<!-- Дропдаун: ТП -->
+<div class="mob-dropdown" id="mob-dd-rep"></div>
 
 <div id="app">
 
@@ -468,6 +573,8 @@ async function initMap() {
   await loadData();
   renderSidebar();
   renderAllZones();
+  updateMobButtons();
+  adjustMapForMobBar();
 }
 
 async function loadData() {
@@ -976,7 +1083,144 @@ async function saveRep() {
 }
 
 // ════════════════════════════════════════
-// ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+// ТЁМНАЯ ТЕМА
+// ════════════════════════════════════════
+let isDark = localStorage.getItem('coverage-theme') === 'dark';
+
+function applyTheme() {
+  document.body.classList.toggle('dark-theme', isDark);
+  localStorage.setItem('coverage-theme', isDark ? 'dark' : 'light');
+}
+
+function toggleTheme() {
+  isDark = !isDark;
+  applyTheme();
+}
+
+// Применяем тему сразу при загрузке
+applyTheme();
+
+// ════════════════════════════════════════
+// МОБИЛЬНЫЕ ДРОПДАУНЫ
+// ════════════════════════════════════════
+let _mobOpenDropdown = null;
+
+function toggleMobDropdown(type) {
+  if (_mobOpenDropdown === type) {
+    closeMobDropdown();
+    return;
+  }
+  closeMobDropdown();
+  _mobOpenDropdown = type;
+
+  if (type === 'day') renderMobDayDropdown();
+  if (type === 'rep') renderMobRepDropdown();
+
+  document.getElementById('mob-dd-' + type).classList.add('open');
+  document.getElementById('mob-dd-overlay').classList.add('open');
+}
+
+function closeMobDropdown() {
+  if (_mobOpenDropdown) {
+    document.getElementById('mob-dd-' + _mobOpenDropdown)?.classList.remove('open');
+  }
+  document.getElementById('mob-dd-overlay').classList.remove('open');
+  _mobOpenDropdown = null;
+}
+
+function renderMobDayDropdown() {
+  const el = document.getElementById('mob-dd-day');
+  const counts = {};
+  zones.forEach(z => { counts[z.name] = (counts[z.name] || 0) + 1; });
+
+  el.innerHTML = `<div class="mob-dropdown-head">Выберите день недели</div>` +
+    `<div class="mob-dd-item ${activeDayId === 'all' ? 'active' : ''}" onclick="mobSelectDay('all')">
+      <div class="mob-dd-dot" style="background:#888"></div>
+      <span>Все дни</span>
+      <span class="mob-dd-count">${zones.length}</span>
+    </div>` +
+    DAYS_LIST.map(d => `
+      <div class="mob-dd-item ${activeDayId === d ? 'active' : ''}" onclick="mobSelectDay('${d}')">
+        <div class="mob-dd-dot" style="background:${DAY_COLORS[d]}"></div>
+        <span>${d}</span>
+        <span class="mob-dd-count">${counts[d] || 0}</span>
+      </div>`).join('');
+}
+
+function renderMobRepDropdown() {
+  const el = document.getElementById('mob-dd-rep');
+  const counts = {};
+  zones.forEach(z => { counts[z.rep_id] = (counts[z.rep_id] || 0) + 1; });
+
+  el.innerHTML = `<div class="mob-dropdown-head">Выберите торгового представителя</div>` +
+    `<div class="mob-dd-item ${activeRepId === 'all' ? 'active' : ''}" onclick="mobSelectRep('all')">
+      <div class="mob-dd-dot" style="background:#888"></div>
+      <span>Все ТП</span>
+      <span class="mob-dd-count">${zones.length}</span>
+    </div>` +
+    (reps.length
+      ? reps.map(r => `
+        <div class="mob-dd-item ${activeRepId === r.id ? 'active' : ''}" onclick="mobSelectRep('${r.id}')">
+          <div class="mob-dd-dot" style="background:#6c757d"></div>
+          <span>${r.name}</span>
+          <span class="mob-dd-count">${counts[r.id] || 0}</span>
+        </div>`).join('')
+      : '<div style="padding:16px;color:var(--muted);font-size:13px;text-align:center">Нет торговых представителей</div>');
+}
+
+function mobSelectDay(day) {
+  activeDayId = day;
+  renderSidebar();
+  renderAllZones();
+  updateMobButtons();
+  closeMobDropdown();
+}
+
+function mobSelectRep(repId) {
+  activeRepId = repId;
+  renderSidebar();
+  renderAllZones();
+  updateMobButtons();
+  closeMobDropdown();
+}
+
+function updateMobButtons() {
+  const dayBtn = document.getElementById('mob-btn-day');
+  const repBtn = document.getElementById('mob-btn-rep');
+  if (!dayBtn || !repBtn) return;
+
+  if (activeDayId === 'all') {
+    dayBtn.textContent = '📅 День';
+    dayBtn.classList.remove('has-value');
+  } else {
+    dayBtn.textContent = '📅 ' + activeDayId;
+    dayBtn.classList.add('has-value');
+  }
+
+  if (activeRepId === 'all') {
+    repBtn.textContent = '👤 ТП';
+    repBtn.classList.remove('has-value');
+  } else {
+    const rep = reps.find(r => r.id === activeRepId);
+    repBtn.textContent = '👤 ' + (rep?.name || 'ТП');
+    repBtn.classList.add('has-value');
+  }
+}
+
+// Сдвиг карты вниз на мобиле чтобы не перекрывала панель
+function adjustMapForMobBar() {
+  const bar = document.getElementById('mob-bar');
+  const map = document.getElementById('map');
+  if (!bar || !map) return;
+  if (window.innerWidth <= 640) {
+    const h = bar.offsetHeight;
+    map.style.paddingTop = h + 'px';
+  } else {
+    map.style.paddingTop = '';
+  }
+}
+window.addEventListener('resize', adjustMapForMobBar);
+
 // ════════════════════════════════════════
 function polygonCenter(coords) {
   let x = 0, y = 0;
