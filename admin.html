@@ -125,7 +125,7 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
 .modal-x{background:none;border:none;color:var(--muted);cursor:pointer;font-size:24px;line-height:1;padding:0 4px;border-radius:6px;transition:all .15s}
 .modal-x:hover{color:var(--text);background:rgba(255,255,255,.06)}
 .modal-body{padding:26px}
-.modal-footer{display:flex;gap:10px;justify-content:flex-end;padding:18px 26px;border-top:1px solid var(--border);background:var(--bg2);position:sticky;bottom:0}
+.modal-footer{display:flex;gap:10px;justify-content:flex-end;padding:18px 26px;border-top:1px solid var(--border);background:var(--bg2);position:sticky;bottom:0;z-index:3}
 
 /* UPLOAD */
 .upload-zone{border:2px dashed var(--border2);border-radius:var(--r2);padding:30px 20px;text-align:center;cursor:pointer;transition:all .2s;background:var(--bg3);position:relative;overflow:hidden}
@@ -775,17 +775,17 @@ const API = (endpoint, options = {}) => {
 
 <!-- CATALOG: ПРОСМОТР ТОВАРОВ КАТАЛОГА -->
 <div class="overlay" id="m-catalog-view">
-  <div class="modal wide" style="max-width:760px">
+  <div class="modal wide" style="max-width:760px;display:flex;flex-direction:column;max-height:88vh">
     <div class="modal-head">
       <div class="modal-title" id="m-catalog-view-title">Товары каталога</div>
       <button class="modal-x" onclick="closeM('m-catalog-view')">×</button>
     </div>
-    <div class="modal-body" style="padding:0">
-      <div style="padding:16px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
-        <button class="btn btn-primary btn-sm" id="btn-add-to-catalog" onclick="openAddToCatalog()">+ Добавить товар</button>
-        <span style="font-size:12px;color:var(--muted)" id="catalog-link-display"></span>
-        <button class="btn btn-sm btn-ghost" id="btn-copy-link" onclick="copyCatalogLink()">📋 Скопировать ссылку</button>
-      </div>
+    <div style="padding:12px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0">
+      <button class="btn btn-primary btn-sm" id="btn-add-to-catalog" onclick="openAddToCatalog()">+ Добавить товар</button>
+      <span style="font-size:12px;color:var(--muted)" id="catalog-link-display"></span>
+      <button class="btn btn-sm btn-ghost" id="btn-copy-link" onclick="copyCatalogLink()">📋 Скопировать ссылку</button>
+    </div>
+    <div style="flex:1;overflow-y:auto;min-height:0">
       <div class="tbl-wrap" style="border:none;border-radius:0">
         <table>
           <thead>
@@ -794,20 +794,47 @@ const API = (endpoint, options = {}) => {
               <th>Базовая цена</th>
               <th>Цена в каталоге</th>
               <th>Цена уп.</th>
-              <th style="width:80px">Действия</th>
+              <th style="width:120px">Действия</th>
             </tr>
           </thead>
           <tbody id="catalog-prods-body"></tbody>
         </table>
       </div>
     </div>
-    <div class="modal-footer">
+    <div style="padding:14px 22px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;flex-shrink:0;background:var(--bg2)">
       <button class="btn btn-ghost" onclick="closeM('m-catalog-view')">Закрыть</button>
     </div>
   </div>
 </div>
 
-<!-- FOLDER -->
+<!-- EDIT CATALOG PRICE -->
+<div class="overlay" id="m-edit-price">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-head">
+      <div class="modal-title">Редактировать цену</div>
+      <button class="modal-x" onclick="closeEditPrice()">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="ecp-price-id">
+      <div class="fg">
+        <label id="ecp-prod-name" style="font-size:13px;color:var(--text);text-transform:none;letter-spacing:0;margin-bottom:10px;display:block;font-weight:600"></label>
+        <label>Базовая цена</label>
+        <input type="text" id="ecp-base-price" readonly style="opacity:.6;margin-bottom:12px">
+      </div>
+      <div class="fg">
+        <label>Цена в каталоге (₸) *</label>
+        <div class="pfx">
+          <span class="pfx-lbl">₸</span>
+          <input type="number" id="ecp-new-price" placeholder="0" min="0">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeEditPrice()">Отмена</button>
+      <button class="btn btn-primary" onclick="saveEditPrice()">Сохранить</button>
+    </div>
+  </div>
+</div>
 <div class="overlay" id="m-folder">
   <div class="modal">
     <div class="modal-head"><div class="modal-title" id="m-folder-title">Новая папка</div><button class="modal-x" onclick="closeM('m-folder')">×</button></div>
@@ -2021,13 +2048,54 @@ async function renderCatalogProds(catalogId) {
         <td style="font-weight:700;color:var(--accent)">${cp.price_per_unit.toLocaleString()} ₸</td>
         <td style="color:var(--muted)">${catalogPackPrice.toLocaleString()} ₸</td>
         <td><div class="td-act">
-          <button class="btn btn-xs btn-ghost" onclick="editCatalogPrice('${cp.id}','${cp.product_id}',${cp.price_per_unit})">✏️</button>
+          <button class="btn btn-xs btn-ghost" onclick="editCatalogPrice('${cp.id}','${p?.name||''}',${basePrice},${cp.price_per_unit})">✏️ Цена</button>
           <button class="btn btn-xs btn-danger" onclick="deleteCatalogPrice('${cp.id}')">✕</button>
         </div></td>
       </tr>`;
     }).join('');
   } catch(e) {
     toast('Ошибка загрузки','e');
+  }
+}
+
+// ── Редактирование цены одного товара ──
+function editCatalogPrice(priceId, prodName, basePrice, currentPrice) {
+  document.getElementById('ecp-price-id').value      = priceId;
+  document.getElementById('ecp-prod-name').textContent = prodName;
+  document.getElementById('ecp-base-price').value    = basePrice.toLocaleString() + ' ₸';
+  document.getElementById('ecp-new-price').value     = currentPrice;
+  // Закрываем окно просмотра чтобы не было наложения
+  closeM('m-catalog-view');
+  openM('m-edit-price');
+  setTimeout(() => document.getElementById('ecp-new-price').focus(), 80);
+}
+
+function closeEditPrice() {
+  closeM('m-edit-price');
+  // Возвращаемся в окно просмотра каталога
+  if (currentCatalogId) {
+    API(`catalogs?id=eq.${currentCatalogId}&limit=1`).then(cats => {
+      if (cats.length) openCatalogView(currentCatalogId, cats[0].slug, cats[0].name);
+    });
+  }
+}
+
+async function saveEditPrice() {
+  const priceId  = document.getElementById('ecp-price-id').value;
+  const newPrice = parseFloat(document.getElementById('ecp-new-price').value);
+  if (!priceId) { toast('Ошибка: нет ID записи', 'e'); return; }
+  if (isNaN(newPrice) || newPrice < 0) { toast('Введите корректную цену', 'e'); return; }
+  try {
+    await API(`catalog_prices?id=eq.${priceId}`, {
+      method: 'PATCH',
+      body: { price_per_unit: newPrice }
+    });
+    toast('Цена обновлена', 's');
+    closeM('m-edit-price');
+    const cats = await API(`catalogs?id=eq.${currentCatalogId}&limit=1`);
+    if (cats.length) await openCatalogView(currentCatalogId, cats[0].slug, cats[0].name);
+  } catch(e) {
+    toast('Ошибка: ' + e.message, 'e');
   }
 }
 
@@ -2089,6 +2157,8 @@ function switchCpTab(tab) {
   });
   const sw = document.getElementById('cp-search-wrap');
   if (sw) sw.style.display = tab === 'products' ? '' : 'none';
+  // Всегда рендерим правую панель (уже добавленные товары)
+  renderCpRight();
   if (tab === 'products')   renderCpLeft();
   if (tab === 'categories') renderCpLeftCategories();
   if (tab === 'folders')    renderCpLeftFolders();
@@ -2099,6 +2169,8 @@ function filterCpLeft() { if (_cpTab === 'products') renderCpLeft(); }
 function renderCpLeft() {
   const q    = (document.getElementById('cp-search')?.value || '').toLowerCase();
   const list = document.getElementById('cp-left-list');
+  // _cpLeft уже содержит только товары не добавленные в каталог
+  // дополнительно исключаем те что переместили в правую колонку в рамках текущей сессии
   const rightIds = new Set(_cpRight.map(p => p.id));
   const filtered = _cpLeft.filter(p => !rightIds.has(p.id) && p.name.toLowerCase().includes(q));
   document.getElementById('cp-left-count').textContent = `(${filtered.length})`;
@@ -2108,7 +2180,7 @@ function renderCpLeft() {
           <div class="cp-card-name">${p.name}</div>
           <div class="cp-card-base">База: ${p.price_per_unit.toLocaleString()} ₸ · уп. ${p.qty_per_pack} шт</div>
         </div>`).join('')
-    : `<div style="text-align:center;padding:24px;color:var(--muted);font-size:13px">Нет доступных товаров</div>`;
+    : `<div style="text-align:center;padding:24px;color:var(--muted);font-size:13px">Все товары уже добавлены в каталог</div>`;
 }
 
 function renderCpLeftCategories() {
